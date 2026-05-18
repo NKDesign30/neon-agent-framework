@@ -1,0 +1,38 @@
+{
+  "name": "neon-agent-framework",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Public-safe Neon-style agent runtime framework with onboarding, approvals, Discord wiring, and daemon tooling.",
+  "type": "module",
+  "bin": {
+    "neon-agent": "./dist/cli.js",
+    "neon": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "examples",
+    "scripts",
+    "docs",
+    ".env.example",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist",
+    "dev": "tsx src/cli.ts",
+    "prepare": "npm run build",
+    "smoke": "rm -rf ./.tmp/smoke-state ./.tmp/smoke-workspace && node dist/cli.js --help && node dist/cli.js onboard --non-interactive --state-dir ./.tmp/smoke-state --workspace ./.tmp/smoke-workspace --name smoke-agent --provider none && node dist/cli.js doctor --json --state-dir ./.tmp/smoke-state --fix --non-interactive && node dist/cli.js start --state-dir ./.tmp/smoke-state --once && node dist/cli.js daemon render --state-dir ./.tmp/smoke-state"
+  },
+  "engines": {
+    "node": ">=22.16"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.15.19",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
