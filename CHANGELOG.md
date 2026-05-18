@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 - 2026-05-18
+
+- Make GitHub install preparation tolerate checked-in `dist/` and rebuild with `npx typescript` only when JavaScript output is missing.
+- Pin install docs and installer script to `v0.1.4`.
+
 ## 0.1.3 - 2026-05-18
 
 - Restore the GitHub install `prepare` build step so `npm install -g github:...` produces executable `dist/*.js` files.

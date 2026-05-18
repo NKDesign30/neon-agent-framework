@@ -3,7 +3,7 @@
 Before the first npm release, install from GitHub:
 
 ```bash
-npm install -g github:NKDesign30/neon-agent-framework#v0.1.3
+npm install -g github:NKDesign30/neon-agent-framework#v0.1.4
 neon onboard
 neon doctor
 ```
@@ -44,6 +44,6 @@ If npm reports success but the generated `neon` command points at a missing `dis
 ```bash
 npm uninstall -g neon-agent-framework || true
 npm cache clean --force
-npm install -g github:NKDesign30/neon-agent-framework#v0.1.3
+npm install -g github:NKDesign30/neon-agent-framework#v0.1.4
 "$(npm config get prefix)/bin/neon" --help
 ```
