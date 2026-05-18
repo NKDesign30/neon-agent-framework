@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.11 - 2026-05-18
+
+- Resolve local CLI provider commands to absolute paths during onboarding when the tool is available.
+- Add `neon doctor --fix` repair for old PATH-based CLI provider commands, so macOS LaunchAgents can run Claude/Codex reliably.
+
 ## 0.1.10 - 2026-05-18
 
 - Remove the Claude GitHub Action workflow because it requires a GitHub secret for Anthropic API or Claude Code OAuth auth.

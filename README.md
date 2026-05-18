@@ -16,8 +16,8 @@ Manual GitHub install before the npm release:
 
 ```bash
 TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.8 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.8.tgz
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.11 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.11.tgz
 rm -rf "$TMP_DIR"
 ```
 
@@ -60,13 +60,10 @@ neon onboard --provider cli --model codex --force
 neon run "Sag kurz hallo"
 ```
 
-For daemon usage, prefer an absolute command path:
+Onboarding stores an absolute CLI command path when `claude` or `codex` is available. For older configs, repair it once before installing the daemon:
 
 ```bash
-neon onboard \
-  --provider cli \
-  --model claude \
-  --cli-command "$(command -v claude)"
+neon doctor --fix
 ```
 
 Non-interactive setup for Docker/CI:

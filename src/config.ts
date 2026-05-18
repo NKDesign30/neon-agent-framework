@@ -61,6 +61,10 @@ export function apiKeyEnvForProvider(provider: ProviderKind): string | undefined
   }
 }
 
+export function defaultCliCommandForModel(model: string): string {
+  return cliDefaultsForModel(model).command;
+}
+
 export function createConfig(input: ICreateConfigInput): INeonConfig {
   const now = new Date().toISOString();
   const stateDir = resolvePath(input.stateDir);

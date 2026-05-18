@@ -2,11 +2,12 @@ import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { createConfig, defaultStateDir, defaultWorkspaceDir, envTemplate, saveConfig } from "../config.js";
+import { createConfig, defaultCliCommandForModel, defaultModelForProvider, defaultStateDir, defaultWorkspaceDir, envTemplate, saveConfig } from "../config.js";
 import { installLaunchAgent } from "../launchagent.js";
 import { initMemoryDatabase } from "../memoryStore.js";
 import { copyDirectoryMissing, ensureDir, pathExists, resolvePath, writeFileIfMissing } from "../fs.js";
 import { readBooleanFlag, readStringFlag, type ICliFlags } from "../args.js";
+import { resolveExecutable } from "../commandResolver.js";
 import type { ApprovalMode, ProviderKind } from "../types.js";
 
 export async function runOnboard(flags: ICliFlags): Promise<void> {
@@ -14,7 +15,8 @@ export async function runOnboard(flags: ICliFlags): Promise<void> {
   const force = readBooleanFlag(flags, "force");
   const installDaemon = readBooleanFlag(flags, "install-daemon");
 
-  const answers = nonInteractive ? readNonInteractive(flags) : await readInteractive(flags);
+  const rawAnswers = nonInteractive ? readNonInteractive(flags) : await readInteractive(flags);
+  const answers = await resolveOnboardCliCommand(rawAnswers);
   const config = createConfig(answers);
   const configPath = join(config.stateDir, "config.json");
 
@@ -133,6 +135,24 @@ interface IProviderAnswers {
   model?: string;
   cliCommand?: string;
   cliArgs?: string[];
+}
+
+async function resolveOnboardCliCommand(answers: IOnboardAnswers): Promise<IOnboardAnswers> {
+  if (answers.provider !== "cli" || answers.cliCommand !== undefined) {
+    return answers;
+  }
+
+  const model = answers.model ?? defaultModelForProvider("cli");
+  const command = defaultCliCommandForModel(model);
+  const resolved = await resolveExecutable(command);
+  if (resolved === undefined) {
+    return answers;
+  }
+
+  return {
+    ...answers,
+    cliCommand: resolved
+  };
 }
 
 async function readInteractiveProvider(rl: ReturnType<typeof createInterface>, flags: ICliFlags): Promise<IProviderAnswers> {

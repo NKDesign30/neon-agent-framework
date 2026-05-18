@@ -16,6 +16,7 @@ export declare function configPathForState(stateDir: string): string;
 export declare function defaultWorkspaceDir(name: string): string;
 export declare function defaultModelForProvider(provider: ProviderKind): string;
 export declare function apiKeyEnvForProvider(provider: ProviderKind): string | undefined;
+export declare function defaultCliCommandForModel(model: string): string;
 export declare function createConfig(input: ICreateConfigInput): INeonConfig;
 export declare function saveConfig(config: INeonConfig): Promise<string>;
 export declare function loadConfig(stateDirInput?: string): Promise<INeonConfig>;

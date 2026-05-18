@@ -40,6 +40,9 @@ export function apiKeyEnvForProvider(provider) {
             return undefined;
     }
 }
+export function defaultCliCommandForModel(model) {
+    return cliDefaultsForModel(model).command;
+}
 export function createConfig(input) {
     const now = new Date().toISOString();
     const stateDir = resolvePath(input.stateDir);

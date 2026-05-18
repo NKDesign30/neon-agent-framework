@@ -1,7 +1,8 @@
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
-import { delimiter, isAbsolute, join } from "node:path";
+import { join } from "node:path";
 import { configPathForState, createConfig, defaultStateDir, defaultWorkspaceDir, loadConfig, saveConfig } from "../config.js";
+import { isExplicitCommandPath, resolveExecutable } from "../commandResolver.js";
 import { ensureDir, pathExists, resolvePath } from "../fs.js";
 import { launchAgentPath } from "../launchagent.js";
 import { readEnvValue } from "../localEnv.js";
@@ -47,7 +48,7 @@ export async function runDoctor(flags: ICliFlags): Promise<void> {
     await checkWritableDir(checks, "logs", config.logDir, fix);
     await checkEnvFile(checks, config, fix);
     await checkMemory(checks, config, fix);
-    await checkProvider(checks, config);
+    await checkProvider(checks, config, fix);
     await checkDiscord(checks, config);
     await checkLaunchAgent(checks, config);
   }
@@ -107,9 +108,9 @@ async function checkEnvFile(checks: IDoctorCheck[], config: INeonConfig, fix: bo
   checks.push(warn("env", `Env file missing: ${envPath}`, "Run `neon onboard` or copy `.env.example`."));
 }
 
-async function checkProvider(checks: IDoctorCheck[], config: INeonConfig): Promise<void> {
+async function checkProvider(checks: IDoctorCheck[], config: INeonConfig, fix: boolean): Promise<void> {
   if (config.provider.kind === "cli") {
-    await checkCliProvider(checks, config);
+    await checkCliProvider(checks, config, fix);
     return;
   }
 
@@ -128,21 +129,30 @@ async function checkProvider(checks: IDoctorCheck[], config: INeonConfig): Promi
   checks.push(warn("provider", `${config.provider.kind} env is missing: ${apiKeyEnv}`, `Add ${apiKeyEnv}=... to ${join(config.stateDir, ".env")} or export it before starting the runtime.`));
 }
 
-async function checkCliProvider(checks: IDoctorCheck[], config: INeonConfig): Promise<void> {
+async function checkCliProvider(checks: IDoctorCheck[], config: INeonConfig, fix: boolean): Promise<void> {
   const command = config.provider.command;
   if (command === undefined || command.trim().length === 0) {
     checks.push(fail("provider", "CLI provider command is missing.", "Run `neon onboard --provider cli --model claude --force`."));
     return;
   }
 
-  if (await executableExists(command)) {
-    checks.push(ok("provider", `CLI provider command is executable: ${command}`));
-  } else {
+  const resolvedCommand = await resolveExecutable(command);
+  if (resolvedCommand === undefined) {
     checks.push(fail("provider", `CLI provider command not found or not executable: ${command}`, "Install the CLI or set an absolute command with `--cli-command`."));
     return;
   }
 
-  if (!isExplicitPath(command)) {
+  checks.push(ok("provider", `CLI provider command is executable: ${resolvedCommand}`));
+
+  if (!isExplicitCommandPath(command)) {
+    if (fix) {
+      config.provider.command = resolvedCommand;
+      config.updatedAt = new Date().toISOString();
+      await saveConfig(config);
+      checks.push(ok("provider-path", `Stored absolute CLI provider command: ${resolvedCommand}`));
+      return;
+    }
+
     checks.push(warn("provider-path", `CLI provider command is resolved through PATH: ${command}`, "Use an absolute `--cli-command` for daemon usage, for example `--cli-command \"$(command -v claude)\"`."));
   }
 }
@@ -221,33 +231,4 @@ function fail(id: string, message: string, fix: string): IDoctorCheck {
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-async function executableExists(command: string): Promise<boolean> {
-  if (isExplicitPath(command)) {
-    return canExecute(command);
-  }
-
-  const pathValue = process.env.PATH ?? "";
-  const dirs = pathValue.split(delimiter).filter((dir) => dir.length > 0);
-  for (const dir of dirs) {
-    if (await canExecute(join(dir, command))) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-async function canExecute(path: string): Promise<boolean> {
-  try {
-    await access(path, constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function isExplicitPath(command: string): boolean {
-  return isAbsolute(command) || command.includes("/");
 }
