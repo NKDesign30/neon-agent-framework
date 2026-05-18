@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6 - 2026-05-18
+
+- Add file-backed local tasks with `neon task add`, `neon task list`, and `neon task complete`.
+- Add explicit Discord sending with `neon discord send` using the configured bot token env and channel id.
+- Share local state `.env` loading across provider, doctor, and Discord paths.
+
 ## 0.1.5 - 2026-05-18
 
 - Switch GitHub installation to a packed tarball flow so npm consumes built `dist/*.js` output instead of a stale Git cache checkout.

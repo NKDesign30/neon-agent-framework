@@ -4,12 +4,13 @@ Before the first npm release, install from a packed GitHub tarball:
 
 ```bash
 TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.5 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.5.tgz
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.6 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.6.tgz
 rm -rf "$TMP_DIR"
 neon onboard
 neon doctor
 neon run "Sag kurz hallo"
+neon task add "Erste eigene Aufgabe"
 ```
 
 For local testing from a checkout:

@@ -33,3 +33,17 @@ The generated workspace is intentionally empty but v3-shaped:
 - No hidden auto-send policies.
 - No direct copy from a private runtime repo.
 - No prefilled opinions about the user's own agents, projects, or channels.
+
+## First Runtime Checks
+
+```bash
+neon run "Sag kurz hallo"
+neon task add "Erste eigene Aufgabe"
+neon task list
+```
+
+Discord is explicit and user-triggered:
+
+```bash
+neon discord send "Agent ist installiert."
+```

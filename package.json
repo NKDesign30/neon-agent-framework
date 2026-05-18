@@ -1,6 +1,6 @@
 {
   "name": "neon-agent-framework",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": false,
   "description": "Public-safe Neon-style agent runtime framework with onboarding, approvals, Discord wiring, and daemon tooling.",
   "type": "module",
@@ -23,7 +23,7 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist",
     "dev": "tsx src/cli.ts",
-    "smoke": "rm -rf ./.tmp/smoke-state ./.tmp/smoke-workspace && node dist/cli.js --help && node dist/cli.js onboard --non-interactive --state-dir ./.tmp/smoke-state --workspace ./.tmp/smoke-workspace --name smoke-agent --provider none && node dist/cli.js doctor --json --state-dir ./.tmp/smoke-state --fix --non-interactive && node dist/cli.js start --state-dir ./.tmp/smoke-state --once && node dist/cli.js run --state-dir ./.tmp/smoke-state \"say ok\" && node dist/cli.js start --state-dir ./.tmp/smoke-state --prompt \"say ok from start\" && node dist/cli.js daemon render --state-dir ./.tmp/smoke-state",
+    "smoke": "rm -rf ./.tmp/smoke-state ./.tmp/smoke-workspace && node dist/cli.js --help && node dist/cli.js onboard --non-interactive --state-dir ./.tmp/smoke-state --workspace ./.tmp/smoke-workspace --name smoke-agent --provider none && node dist/cli.js doctor --json --state-dir ./.tmp/smoke-state --fix --non-interactive && node dist/cli.js start --state-dir ./.tmp/smoke-state --once && node dist/cli.js run --state-dir ./.tmp/smoke-state \"say ok\" && node dist/cli.js task add --state-dir ./.tmp/smoke-state \"write first owned task\" && node dist/cli.js task list --state-dir ./.tmp/smoke-state --json && node dist/cli.js start --state-dir ./.tmp/smoke-state --prompt \"say ok from start\" && node dist/cli.js daemon render --state-dir ./.tmp/smoke-state",
     "prepare": "node scripts/prepare-github-install.mjs"
   },
   "engines": {

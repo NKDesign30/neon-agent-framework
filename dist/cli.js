@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { parseFlags } from "./args.js";
 import { runDaemon } from "./commands/daemon.js";
+import { runDiscord } from "./commands/discord.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runOnboard } from "./commands/onboard.js";
 import { runPrompt } from "./commands/run.js";
 import { runStart } from "./commands/start.js";
+import { runTask } from "./commands/task.js";
 const HELP = `Neon Agent Framework
 
 Usage:
@@ -14,6 +16,8 @@ Commands:
   onboard              Create config, env, workspace, starter files
   doctor               Validate local setup
   run <prompt>         Run one provider-backed agent prompt
+  task <command>       Manage local agent tasks
+  discord send <text>  Send an explicit Discord message
   start                Start the runtime
   daemon <command>     Manage macOS LaunchAgent
 
@@ -42,6 +46,12 @@ async function main(argv) {
             return;
         case "run":
             await runPrompt(flags);
+            return;
+        case "task":
+            await runTask(flags);
+            return;
+        case "discord":
+            await runDiscord(flags);
             return;
         case "start":
             await runStart(flags);

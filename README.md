@@ -16,8 +16,8 @@ Manual GitHub install before the npm release:
 
 ```bash
 TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.5 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.5.tgz
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.6 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.6.tgz
 rm -rf "$TMP_DIR"
 ```
 
@@ -37,6 +37,7 @@ node dist/cli.js onboard
 neon onboard
 neon doctor
 neon run "Sag kurz hallo"
+neon task add "Erste eigene Aufgabe"
 neon start
 ```
 
@@ -57,6 +58,10 @@ neon onboard \
 neon onboard              # create config, env, workspace, starter files
 neon doctor               # validate local setup
 neon run "prompt"         # run one provider-backed prompt
+neon task add "title"     # create a local task
+neon task list            # list local tasks
+neon task complete <id>   # complete a local task
+neon discord send "text"  # send an explicit Discord message
 neon start                # run the local runtime
 neon start --prompt "..." # start runtime and run a prompt smoke
 neon daemon install       # install macOS LaunchAgent

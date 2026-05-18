@@ -1,9 +1,10 @@
-import { access, readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { join } from "node:path";
 import { configPathForState, createConfig, defaultStateDir, defaultWorkspaceDir, loadConfig, saveConfig } from "../config.js";
 import { ensureDir, pathExists, resolvePath } from "../fs.js";
 import { launchAgentPath } from "../launchagent.js";
+import { readEnvValue } from "../localEnv.js";
 import { readBooleanFlag, readStringFlag } from "../args.js";
 export async function runDoctor(flags) {
     const json = readBooleanFlag(flags, "json");
@@ -97,17 +98,12 @@ async function checkProvider(checks, config) {
         checks.push(warn("provider", "No model provider configured.", "Run `neon onboard --provider openai`."));
         return;
     }
-    const envPath = join(config.stateDir, ".env");
-    const stateEnvValue = await readEnvValue(envPath, apiKeyEnv);
-    if (process.env[apiKeyEnv] !== undefined && process.env[apiKeyEnv]?.length !== 0) {
+    const stateEnvValue = await readEnvValue(config.stateDir, apiKeyEnv);
+    if (stateEnvValue !== undefined && stateEnvValue.length > 0) {
         checks.push(ok("provider", `${config.provider.kind} env is present: ${apiKeyEnv}`));
         return;
     }
-    if (stateEnvValue !== undefined && stateEnvValue.length > 0) {
-        checks.push(ok("provider", `${config.provider.kind} env is present in local state env: ${apiKeyEnv}`));
-        return;
-    }
-    checks.push(warn("provider", `${config.provider.kind} env is missing: ${apiKeyEnv}`, `Add ${apiKeyEnv}=... to ${envPath} or export it before starting the runtime.`));
+    checks.push(warn("provider", `${config.provider.kind} env is missing: ${apiKeyEnv}`, `Add ${apiKeyEnv}=... to ${join(config.stateDir, ".env")} or export it before starting the runtime.`));
 }
 async function checkDiscord(checks, config) {
     if (!config.discord.enabled) {
@@ -119,13 +115,9 @@ async function checkDiscord(checks, config) {
         checks.push(fail("discord", "Discord enabled but botTokenEnv is missing.", "Set discord.botTokenEnv in config."));
         return;
     }
-    if (process.env[tokenEnv] !== undefined && process.env[tokenEnv]?.length !== 0) {
-        checks.push(ok("discord", `Discord token env is present: ${tokenEnv}`));
-        return;
-    }
-    const stateEnvValue = await readEnvValue(join(config.stateDir, ".env"), tokenEnv);
+    const stateEnvValue = await readEnvValue(config.stateDir, tokenEnv);
     if (stateEnvValue !== undefined && stateEnvValue.length > 0) {
-        checks.push(ok("discord", `Discord token env is present in local state env: ${tokenEnv}`));
+        checks.push(ok("discord", `Discord token env is present: ${tokenEnv}`));
         return;
     }
     checks.push(warn("discord", `Discord token env is missing: ${tokenEnv}`, `Add ${tokenEnv}=... to ${join(config.stateDir, ".env")} or export it before using Discord.`));
@@ -162,25 +154,5 @@ function fail(id, message, fix) {
 }
 function formatError(error) {
     return error instanceof Error ? error.message : String(error);
-}
-async function readEnvValue(path, key) {
-    if (!(await pathExists(path))) {
-        return undefined;
-    }
-    const raw = await readFile(path, "utf8");
-    for (const line of raw.split(/\r?\n/)) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith("#") || !trimmed.startsWith(`${key}=`)) {
-            continue;
-        }
-        return stripEnvQuotes(trimmed.slice(key.length + 1).trim());
-    }
-    return undefined;
-}
-function stripEnvQuotes(value) {
-    if (value.length >= 2 && ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")))) {
-        return value.slice(1, -1);
-    }
-    return value;
 }
 //# sourceMappingURL=doctor.js.map

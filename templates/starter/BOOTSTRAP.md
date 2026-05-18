@@ -7,6 +7,7 @@ Run:
 ```bash
 neon doctor
 neon run "Say hello"
+neon task add "Create first local task"
 neon start --once
 ```
 

@@ -1,6 +1,7 @@
-import { appendFile, readFile, writeFile } from "node:fs/promises";
+import { appendFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { ensureDir, pathExists, writeJson } from "./fs.js";
+import { ensureDir, writeJson } from "./fs.js";
+import { requireEnvValue } from "./localEnv.js";
 const DEFAULT_MAX_OUTPUT_TOKENS = 800;
 export async function runAgentPrompt(config, prompt) {
     const cleanPrompt = prompt.trim();
@@ -85,52 +86,7 @@ async function requireProviderApiKey(config) {
     if (apiKeyEnv === undefined) {
         throw new Error(`Provider ${config.provider.kind} has no apiKeyEnv configured.`);
     }
-    const stateEnv = await readStateEnv(config);
-    const value = process.env[apiKeyEnv] ?? stateEnv[apiKeyEnv];
-    if (value !== undefined && value.trim().length > 0) {
-        return value.trim();
-    }
-    throw new Error(`Missing ${apiKeyEnv}. Add it to ${join(config.stateDir, ".env")} or export it before running.`);
-}
-async function readStateEnv(config) {
-    const envPath = join(config.stateDir, ".env");
-    if (!(await pathExists(envPath))) {
-        return {};
-    }
-    const raw = await readFile(envPath, "utf8");
-    const values = {};
-    for (const line of raw.split(/\r?\n/)) {
-        const parsed = parseEnvLine(line);
-        if (parsed !== null) {
-            values[parsed.key] = parsed.value;
-        }
-    }
-    return values;
-}
-function parseEnvLine(line) {
-    const trimmed = line.trim();
-    if (trimmed.length === 0 || trimmed.startsWith("#")) {
-        return null;
-    }
-    const index = trimmed.indexOf("=");
-    if (index <= 0) {
-        return null;
-    }
-    const key = trimmed.slice(0, index).trim();
-    const rawValue = trimmed.slice(index + 1).trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
-        return null;
-    }
-    return {
-        key,
-        value: stripEnvQuotes(rawValue)
-    };
-}
-function stripEnvQuotes(value) {
-    if (value.length >= 2 && ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")))) {
-        return value.slice(1, -1);
-    }
-    return value;
+    return requireEnvValue(config.stateDir, apiKeyEnv, "running the provider");
 }
 async function postJson(url, headers, body) {
     const response = await fetch(url, {

@@ -7,3 +7,10 @@ Suggested files:
 - `inbox.md`
 - `done.md`
 - `recurring.md`
+
+CLI:
+
+```bash
+neon task add "Call first provider smoke"
+neon task list
+```
