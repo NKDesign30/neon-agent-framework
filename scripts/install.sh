@@ -51,7 +51,7 @@ if ! command -v npm >/dev/null 2>&1; then
   exit 1
 fi
 
-NEON_AGENT_PACKAGE="${NEON_AGENT_PACKAGE:-github:NKDesign30/neon-agent-framework#v0.1.9}"
+NEON_AGENT_PACKAGE="${NEON_AGENT_PACKAGE:-github:NKDesign30/neon-agent-framework#v0.1.10}"
 TMP_DIR="$(mktemp -d)"
 cleanup() {
   rm -rf "$TMP_DIR"

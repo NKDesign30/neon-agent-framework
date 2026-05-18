@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.10 - 2026-05-18
+
+- Remove the Claude GitHub Action workflow because it requires a GitHub secret for Anthropic API or Claude Code OAuth auth.
+- Keep local terminal provider support as the default Claude/Codex path.
+
 ## 0.1.9 - 2026-05-18
 
 - Add the Claude Code GitHub Action workflow for `@claude` issue and pull request comments.
