@@ -16,8 +16,8 @@ Manual GitHub install before the npm release:
 
 ```bash
 TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.6 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.6.tgz
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.7 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.7.tgz
 rm -rf "$TMP_DIR"
 ```
 
@@ -36,7 +36,10 @@ node dist/cli.js onboard
 ```bash
 neon onboard
 neon doctor
+neon blueprint
 neon run "Sag kurz hallo"
+neon memory add --title "Erste Erinnerung" --body "Mein Agent ist installiert."
+neon memory search "installiert"
 neon task add "Erste eigene Aufgabe"
 neon start
 ```
@@ -57,7 +60,11 @@ neon onboard \
 ```bash
 neon onboard              # create config, env, workspace, starter files
 neon doctor               # validate local setup
+neon blueprint            # print builder roadmap for the local owner AI
 neon run "prompt"         # run one provider-backed prompt
+neon memory init          # create the local SQLite memory database
+neon memory add ...       # add owned context
+neon memory search ...    # search owned context
 neon task add "title"     # create a local task
 neon task list            # list local tasks
 neon task complete <id>   # complete a local task

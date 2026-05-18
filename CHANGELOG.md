@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7 - 2026-05-18
+
+- Add install-time local SQLite memory database with FTS search.
+- Add `neon memory init`, `neon memory add`, `neon memory search`, and `neon memory list`.
+- Add `neon blueprint` plus public architecture, memory-core, and builder roadmap docs for the local owner AI.
+
 ## 0.1.6 - 2026-05-18
 
 - Add file-backed local tasks with `neon task add`, `neon task list`, and `neon task complete`.

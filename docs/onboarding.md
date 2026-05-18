@@ -38,6 +38,8 @@ The generated workspace is intentionally empty but v3-shaped:
 
 ```bash
 neon run "Sag kurz hallo"
+neon memory add --title "Erste Erinnerung" --body "Mein Agent ist installiert."
+neon memory search "installiert"
 neon task add "Erste eigene Aufgabe"
 neon task list
 ```

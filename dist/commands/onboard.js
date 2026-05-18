@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { createConfig, defaultStateDir, defaultWorkspaceDir, envTemplate, saveConfig } from "../config.js";
 import { installLaunchAgent } from "../launchagent.js";
+import { initMemoryDatabase } from "../memoryStore.js";
 import { copyDirectoryMissing, ensureDir, pathExists, resolvePath, writeFileIfMissing } from "../fs.js";
 import { readBooleanFlag, readStringFlag } from "../args.js";
 export async function runOnboard(flags) {
@@ -21,10 +22,12 @@ export async function runOnboard(flags) {
     await ensureDir(config.workspaceDir);
     await ensureStarterWorkspaceDirs(config.workspaceDir);
     await writeFileIfMissing(join(config.stateDir, ".env"), envTemplate());
+    await initMemoryDatabase(config);
     const templateDir = fileURLToPath(new URL("../../templates/starter/", import.meta.url));
     const copied = await copyDirectoryMissing(templateDir, config.workspaceDir);
     const savedPath = await saveConfig(config);
     console.log(`Created config: ${savedPath}`);
+    console.log(`Memory database: ${join(config.stateDir, "memory", "memory.sqlite")}`);
     console.log(`Workspace: ${config.workspaceDir}`);
     if (copied.length > 0) {
         console.log(`Starter files: ${copied.join(", ")}`);
@@ -38,7 +41,7 @@ export async function runOnboard(flags) {
         });
         console.log(`LaunchAgent installed: ${plistPath}`);
     }
-    console.log("Next: neon doctor && neon start");
+    console.log("Next: neon doctor && neon blueprint");
 }
 async function ensureStarterWorkspaceDirs(workspaceDir) {
     const dirs = ["agents", "memory", "tasks", "skills", "channels", "approvals", "runs"];

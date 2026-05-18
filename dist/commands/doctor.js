@@ -5,6 +5,7 @@ import { configPathForState, createConfig, defaultStateDir, defaultWorkspaceDir,
 import { ensureDir, pathExists, resolvePath } from "../fs.js";
 import { launchAgentPath } from "../launchagent.js";
 import { readEnvValue } from "../localEnv.js";
+import { initMemoryDatabase, memoryDatabasePath } from "../memoryStore.js";
 import { readBooleanFlag, readStringFlag } from "../args.js";
 export async function runDoctor(flags) {
     const json = readBooleanFlag(flags, "json");
@@ -40,6 +41,7 @@ export async function runDoctor(flags) {
         await checkWritableDir(checks, "workspace", config.workspaceDir, fix);
         await checkWritableDir(checks, "logs", config.logDir, fix);
         await checkEnvFile(checks, config, fix);
+        await checkMemory(checks, config, fix);
         await checkProvider(checks, config);
         await checkDiscord(checks, config);
         await checkLaunchAgent(checks, config);
@@ -104,6 +106,17 @@ async function checkProvider(checks, config) {
         return;
     }
     checks.push(warn("provider", `${config.provider.kind} env is missing: ${apiKeyEnv}`, `Add ${apiKeyEnv}=... to ${join(config.stateDir, ".env")} or export it before starting the runtime.`));
+}
+async function checkMemory(checks, config, fix) {
+    const dbPath = memoryDatabasePath(config);
+    if (fix) {
+        await initMemoryDatabase(config);
+    }
+    if (await pathExists(dbPath)) {
+        checks.push(ok("memory", `Memory database exists: ${dbPath}`));
+        return;
+    }
+    checks.push(warn("memory", `Memory database missing: ${dbPath}`, "Run `neon memory init` or `neon doctor --fix`."));
 }
 async function checkDiscord(checks, config) {
     if (!config.discord.enabled) {

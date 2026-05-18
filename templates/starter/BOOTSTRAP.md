@@ -6,7 +6,10 @@ Run:
 
 ```bash
 neon doctor
+neon blueprint
 neon run "Say hello"
+neon memory add --title "First memory" --body "My agent is installed."
+neon memory search "installed"
 neon task add "Create first local task"
 neon start --once
 ```
