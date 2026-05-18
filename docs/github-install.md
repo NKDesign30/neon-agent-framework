@@ -3,7 +3,7 @@
 Before the first npm release, install from GitHub:
 
 ```bash
-npm install -g github:NKDesign30/neon-agent-framework
+npm install -g github:NKDesign30/neon-agent-framework#v0.1.3
 neon onboard
 neon doctor
 ```
@@ -19,7 +19,7 @@ npm link
 neon onboard
 ```
 
-The repository includes the built `dist/` output so GitHub installs do not require TypeScript on the target machine.
+The repository includes the built `dist/` output and a `prepare` build step so GitHub installs produce executable `.js` files.
 
 ## `neon` Command Not Found
 
@@ -35,4 +35,15 @@ export PATH="$NPM_PREFIX/bin:$PATH"
 hash -r
 
 neon --help
+```
+
+## Missing `dist/cli.js`
+
+If npm reports success but the generated `neon` command points at a missing `dist/cli.js`, the npm Git cache likely kept a broken checkout. Reinstall the current tag from a clean cache:
+
+```bash
+npm uninstall -g neon-agent-framework || true
+npm cache clean --force
+npm install -g github:NKDesign30/neon-agent-framework#v0.1.3
+"$(npm config get prefix)/bin/neon" --help
 ```

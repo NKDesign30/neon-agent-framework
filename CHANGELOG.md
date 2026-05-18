@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 - 2026-05-18
+
+- Restore the GitHub install `prepare` build step so `npm install -g github:...` produces executable `dist/*.js` files.
+- Pin install docs and installer script to the current release tag.
+- Document recovery for stale npm Git caches that install declarations without JavaScript output.
+
 ## 0.1.2 - 2026-05-18
 
 - Document npm global `PATH` troubleshooting for GitHub installs.

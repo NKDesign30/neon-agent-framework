@@ -9,7 +9,7 @@ This is not a copy of a private Neon system. It contains no private memories, so
 Install from GitHub:
 
 ```bash
-npm install -g github:NKDesign30/neon-agent-framework
+npm install -g github:NKDesign30/neon-agent-framework#v0.1.3
 neon onboard --install-daemon
 ```
 
@@ -19,7 +19,7 @@ Installer:
 curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/dev/scripts/install.sh | bash
 ```
 
-The package is not published to the npm registry yet. Use the GitHub install until the first npm release.
+The package is not published to the npm registry yet. Use the tagged GitHub install until the first npm release.
 
 Local development:
 
@@ -104,4 +104,12 @@ echo "export PATH=\"$NPM_PREFIX/bin:\$PATH\"" >> ~/.zshrc
 export PATH="$NPM_PREFIX/bin:$PATH"
 hash -r
 neon --help
+```
+
+If `dist/cli.js` is missing after a GitHub install, clear the local Git install cache and reinstall the current tag:
+
+```bash
+npm uninstall -g neon-agent-framework || true
+npm cache clean --force
+npm install -g github:NKDesign30/neon-agent-framework#v0.1.3
 ```
