@@ -92,3 +92,16 @@ npm run smoke
 ```
 
 See [GitHub install](docs/github-install.md) before publishing the first release.
+
+## Troubleshooting
+
+If installation succeeds but `neon` is not found, your npm global bin directory is missing from `PATH`:
+
+```bash
+NPM_PREFIX="$(npm config get prefix)"
+"$NPM_PREFIX/bin/neon" --help
+echo "export PATH=\"$NPM_PREFIX/bin:\$PATH\"" >> ~/.zshrc
+export PATH="$NPM_PREFIX/bin:$PATH"
+hash -r
+neon --help
+```

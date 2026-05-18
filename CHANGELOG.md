@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 2026-05-18
+
+- Document npm global `PATH` troubleshooting for GitHub installs.
+
 ## 0.1.1 - 2026-05-18
 
 - Commit built `dist/` output so GitHub installs work without TypeScript on the target machine.
