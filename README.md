@@ -6,17 +6,20 @@ This is not a copy of a private Neon system. It contains no private memories, so
 
 ## Install
 
-```bash
-npm install -g neon-agent-framework
-neon onboard --install-daemon
-```
-
-Install from GitHub before an npm release:
+Install from GitHub:
 
 ```bash
 npm install -g github:NKDesign30/neon-agent-framework
-neon onboard
+neon onboard --install-daemon
 ```
+
+Installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/dev/scripts/install.sh | bash
+```
+
+The package is not published to the npm registry yet. Use the GitHub install until the first npm release.
 
 Local development:
 
