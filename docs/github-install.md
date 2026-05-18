@@ -19,4 +19,4 @@ npm link
 neon onboard
 ```
 
-The package has a `prepare` script so GitHub installs build `dist/` before the CLI bin is linked.
+The repository includes the built `dist/` output so GitHub installs do not require TypeScript on the target machine.
