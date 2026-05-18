@@ -1,11 +1,15 @@
 # GitHub Install
 
-Before the first npm release, install from GitHub:
+Before the first npm release, install from a packed GitHub tarball:
 
 ```bash
-npm install -g github:NKDesign30/neon-agent-framework#v0.1.4
+TMP_DIR="$(mktemp -d)"
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.5 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.5.tgz
+rm -rf "$TMP_DIR"
 neon onboard
 neon doctor
+neon run "Sag kurz hallo"
 ```
 
 For local testing from a checkout:
@@ -19,7 +23,7 @@ npm link
 neon onboard
 ```
 
-The repository includes the built `dist/` output and a `prepare` build step so GitHub installs produce executable `.js` files.
+The repository includes the built `dist/` output, but direct `npm install -g github:...` is not the recommended consumer path. Some npm versions install from a stale Git cache and create a global `neon` symlink that points at a missing `dist/cli.js`. Packing first makes npm consume the same tarball shape that a registry release would use.
 
 ## `neon` Command Not Found
 
@@ -44,6 +48,6 @@ If npm reports success but the generated `neon` command points at a missing `dis
 ```bash
 npm uninstall -g neon-agent-framework || true
 npm cache clean --force
-npm install -g github:NKDesign30/neon-agent-framework#v0.1.4
-"$(npm config get prefix)/bin/neon" --help
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
+neon --help
 ```

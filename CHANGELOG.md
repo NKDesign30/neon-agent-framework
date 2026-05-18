@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 - 2026-05-18
+
+- Switch GitHub installation to a packed tarball flow so npm consumes built `dist/*.js` output instead of a stale Git cache checkout.
+- Add `neon run` and `neon start --prompt` for real provider-backed one-shot agent execution.
+- Load provider keys from the local state `.env` as well as exported environment variables.
+- Generate empty owner-controlled v3 workspace areas for agents, memory, tasks, skills, channels, approvals, and runs.
+
 ## 0.1.4 - 2026-05-18
 
 - Make GitHub install preparation tolerate checked-in `dist/` and rebuild with `npx typescript` only when JavaScript output is missing.

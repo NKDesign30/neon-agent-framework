@@ -19,6 +19,7 @@ export async function runOnboard(flags) {
     await ensureDir(config.stateDir);
     await ensureDir(config.logDir);
     await ensureDir(config.workspaceDir);
+    await ensureStarterWorkspaceDirs(config.workspaceDir);
     await writeFileIfMissing(join(config.stateDir, ".env"), envTemplate());
     const templateDir = fileURLToPath(new URL("../../templates/starter/", import.meta.url));
     const copied = await copyDirectoryMissing(templateDir, config.workspaceDir);
@@ -38,6 +39,12 @@ export async function runOnboard(flags) {
         console.log(`LaunchAgent installed: ${plistPath}`);
     }
     console.log("Next: neon doctor && neon start");
+}
+async function ensureStarterWorkspaceDirs(workspaceDir) {
+    const dirs = ["agents", "memory", "tasks", "skills", "channels", "approvals", "runs"];
+    for (const dir of dirs) {
+        await ensureDir(join(workspaceDir, dir));
+    }
 }
 function readNonInteractive(flags) {
     const name = readStringFlag(flags, "name") ?? "neon-agent";

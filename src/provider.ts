@@ -1,0 +1,298 @@
+import { appendFile, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { ensureDir, pathExists, writeJson } from "./fs.js";
+import type { INeonConfig, ProviderKind } from "./types.js";
+
+const DEFAULT_MAX_OUTPUT_TOKENS = 800;
+
+export interface IAgentRunResult {
+  id: string;
+  provider: ProviderKind;
+  model: string;
+  prompt: string;
+  output: string;
+  createdAt: string;
+  durationMs: number;
+}
+
+export async function runAgentPrompt(config: INeonConfig, prompt: string): Promise<IAgentRunResult> {
+  const cleanPrompt = prompt.trim();
+  if (cleanPrompt.length === 0) {
+    throw new Error("Prompt is empty.");
+  }
+
+  const startedAt = performance.now();
+  const output = await callConfiguredProvider(config, cleanPrompt);
+  const result: IAgentRunResult = {
+    id: crypto.randomUUID(),
+    provider: config.provider.kind,
+    model: config.provider.model,
+    prompt: cleanPrompt,
+    output,
+    createdAt: new Date().toISOString(),
+    durationMs: Math.round(performance.now() - startedAt)
+  };
+
+  await persistAgentRun(config, result);
+  return result;
+}
+
+async function callConfiguredProvider(config: INeonConfig, prompt: string): Promise<string> {
+  switch (config.provider.kind) {
+    case "none":
+      return `Provider none received: ${prompt}`;
+    case "openai":
+      return callOpenAi(config, prompt);
+    case "anthropic":
+      return callAnthropic(config, prompt);
+    case "openrouter":
+      return callOpenRouter(config, prompt);
+  }
+}
+
+async function callOpenAi(config: INeonConfig, prompt: string): Promise<string> {
+  const apiKey = await requireProviderApiKey(config);
+  const payload = await postJson("https://api.openai.com/v1/responses", {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json"
+  }, {
+    model: config.provider.model,
+    input: prompt,
+    max_output_tokens: DEFAULT_MAX_OUTPUT_TOKENS
+  });
+
+  return requireTextOutput(payload, extractOpenAiText, "OpenAI response did not contain text output.");
+}
+
+async function callAnthropic(config: INeonConfig, prompt: string): Promise<string> {
+  const apiKey = await requireProviderApiKey(config);
+  const payload = await postJson("https://api.anthropic.com/v1/messages", {
+    "x-api-key": apiKey,
+    "anthropic-version": "2023-06-01",
+    "Content-Type": "application/json"
+  }, {
+    model: config.provider.model,
+    max_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
+    messages: [
+      {
+        role: "user",
+        content: prompt
+      }
+    ]
+  });
+
+  return requireTextOutput(payload, extractContentText, "Anthropic response did not contain text output.");
+}
+
+async function callOpenRouter(config: INeonConfig, prompt: string): Promise<string> {
+  const apiKey = await requireProviderApiKey(config);
+  const payload = await postJson("https://openrouter.ai/api/v1/chat/completions", {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json"
+  }, {
+    model: config.provider.model,
+    max_tokens: DEFAULT_MAX_OUTPUT_TOKENS,
+    messages: [
+      {
+        role: "user",
+        content: prompt
+      }
+    ]
+  });
+
+  return requireTextOutput(payload, extractOpenRouterText, "OpenRouter response did not contain text output.");
+}
+
+async function requireProviderApiKey(config: INeonConfig): Promise<string> {
+  const apiKeyEnv = config.provider.apiKeyEnv;
+  if (apiKeyEnv === undefined) {
+    throw new Error(`Provider ${config.provider.kind} has no apiKeyEnv configured.`);
+  }
+
+  const stateEnv = await readStateEnv(config);
+  const value = process.env[apiKeyEnv] ?? stateEnv[apiKeyEnv];
+  if (value !== undefined && value.trim().length > 0) {
+    return value.trim();
+  }
+
+  throw new Error(`Missing ${apiKeyEnv}. Add it to ${join(config.stateDir, ".env")} or export it before running.`);
+}
+
+async function readStateEnv(config: INeonConfig): Promise<Record<string, string>> {
+  const envPath = join(config.stateDir, ".env");
+  if (!(await pathExists(envPath))) {
+    return {};
+  }
+
+  const raw = await readFile(envPath, "utf8");
+  const values: Record<string, string> = {};
+  for (const line of raw.split(/\r?\n/)) {
+    const parsed = parseEnvLine(line);
+    if (parsed !== null) {
+      values[parsed.key] = parsed.value;
+    }
+  }
+
+  return values;
+}
+
+function parseEnvLine(line: string): { key: string; value: string } | null {
+  const trimmed = line.trim();
+  if (trimmed.length === 0 || trimmed.startsWith("#")) {
+    return null;
+  }
+
+  const index = trimmed.indexOf("=");
+  if (index <= 0) {
+    return null;
+  }
+
+  const key = trimmed.slice(0, index).trim();
+  const rawValue = trimmed.slice(index + 1).trim();
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+    return null;
+  }
+
+  return {
+    key,
+    value: stripEnvQuotes(rawValue)
+  };
+}
+
+function stripEnvQuotes(value: string): string {
+  if (value.length >= 2 && ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")))) {
+    return value.slice(1, -1);
+  }
+
+  return value;
+}
+
+async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body)
+  });
+  const text = await response.text();
+  const payload = text.length > 0 ? parseJsonResponse(text, url) : {};
+
+  if (!response.ok) {
+    const providerError = extractProviderError(payload);
+    const details = providerError ?? text.slice(0, 500);
+    throw new Error(`${response.status} ${response.statusText} from ${url}: ${details}`);
+  }
+
+  return payload;
+}
+
+function parseJsonResponse(text: string, url: string): unknown {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error(`Invalid JSON response from ${url}.`);
+  }
+}
+
+function requireTextOutput(payload: unknown, extractor: (payload: unknown) => string | undefined, message: string): string {
+  const text = extractor(payload);
+  if (text !== undefined && text.trim().length > 0) {
+    return text.trim();
+  }
+
+  throw new Error(message);
+}
+
+function extractOpenAiText(payload: unknown): string | undefined {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+
+  if (isNonEmptyString(payload.output_text)) {
+    return payload.output_text;
+  }
+
+  return extractContentText(payload.output);
+}
+
+function extractOpenRouterText(payload: unknown): string | undefined {
+  if (!isRecord(payload) || !Array.isArray(payload.choices)) {
+    return undefined;
+  }
+
+  const [firstChoice] = payload.choices;
+  if (!isRecord(firstChoice) || !isRecord(firstChoice.message)) {
+    return undefined;
+  }
+
+  const content = firstChoice.message.content;
+  return typeof content === "string" ? content : extractContentText(content);
+}
+
+function extractContentText(value: unknown): string | undefined {
+  const parts = collectTextParts(value);
+  return parts.length > 0 ? parts.join("\n") : undefined;
+}
+
+function collectTextParts(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectTextParts(item));
+  }
+
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const text = value.text;
+  if (typeof text === "string") {
+    return [text];
+  }
+
+  const content = value.content;
+  if (content !== undefined) {
+    return collectTextParts(content);
+  }
+
+  return [];
+}
+
+function extractProviderError(payload: unknown): string | undefined {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+
+  const error = payload.error;
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (isRecord(error)) {
+    if (typeof error.message === "string") {
+      return error.message;
+    }
+    if (typeof error.type === "string") {
+      return error.type;
+    }
+  }
+
+  if (typeof payload.message === "string") {
+    return payload.message;
+  }
+
+  return undefined;
+}
+
+async function persistAgentRun(config: INeonConfig, result: IAgentRunResult): Promise<void> {
+  const runsDir = join(config.stateDir, "runs");
+  await ensureDir(runsDir);
+  await writeJson(join(runsDir, `${result.id}.json`), result);
+  await writeFile(join(config.stateDir, "last-run.txt"), `${result.createdAt} ${result.id} ${result.provider}/${result.model}\n`, "utf8");
+  await appendFile(join(config.logDir, "runtime.log"), `${result.createdAt} agent run id=${result.id} provider=${result.provider} model=${result.model} durationMs=${result.durationMs}\n`, "utf8");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}

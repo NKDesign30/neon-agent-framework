@@ -24,6 +24,7 @@ export async function runOnboard(flags: ICliFlags): Promise<void> {
   await ensureDir(config.stateDir);
   await ensureDir(config.logDir);
   await ensureDir(config.workspaceDir);
+  await ensureStarterWorkspaceDirs(config.workspaceDir);
   await writeFileIfMissing(join(config.stateDir, ".env"), envTemplate());
 
   const templateDir = fileURLToPath(new URL("../../templates/starter/", import.meta.url));
@@ -47,6 +48,13 @@ export async function runOnboard(flags: ICliFlags): Promise<void> {
   }
 
   console.log("Next: neon doctor && neon start");
+}
+
+async function ensureStarterWorkspaceDirs(workspaceDir: string): Promise<void> {
+  const dirs = ["agents", "memory", "tasks", "skills", "channels", "approvals", "runs"];
+  for (const dir of dirs) {
+    await ensureDir(join(workspaceDir, dir));
+  }
 }
 
 function readNonInteractive(flags: ICliFlags): IOnboardAnswers {

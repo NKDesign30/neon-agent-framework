@@ -3,6 +3,7 @@ import { parseFlags } from "./args.js";
 import { runDaemon } from "./commands/daemon.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runOnboard } from "./commands/onboard.js";
+import { runPrompt } from "./commands/run.js";
 import { runStart } from "./commands/start.js";
 
 const HELP = `Neon Agent Framework
@@ -13,6 +14,7 @@ Usage:
 Commands:
   onboard              Create config, env, workspace, starter files
   doctor               Validate local setup
+  run <prompt>         Run one provider-backed agent prompt
   start                Start the runtime
   daemon <command>     Manage macOS LaunchAgent
 
@@ -42,6 +44,9 @@ async function main(argv: string[]): Promise<void> {
       return;
     case "doctor":
       await runDoctor(flags);
+      return;
+    case "run":
+      await runPrompt(flags);
       return;
     case "start":
       await runStart(flags);

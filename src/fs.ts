@@ -1,6 +1,6 @@
 import { access, copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 
 export function expandHome(input: string): string {
@@ -57,7 +57,7 @@ export async function writeFileIfMissing(path: string, contents: string): Promis
   return true;
 }
 
-export async function copyDirectoryMissing(sourceDir: string, targetDir: string): Promise<string[]> {
+export async function copyDirectoryMissing(sourceDir: string, targetDir: string, prefix = ""): Promise<string[]> {
   await ensureDir(targetDir);
   const copied: string[] = [];
   const entries = await readdir(sourceDir);
@@ -65,17 +65,18 @@ export async function copyDirectoryMissing(sourceDir: string, targetDir: string)
   for (const entry of entries) {
     const source = join(sourceDir, entry);
     const target = join(targetDir, entry);
+    const relative = prefix.length > 0 ? join(prefix, entry) : entry;
     const info = await stat(source);
 
     if (info.isDirectory()) {
-      const nested = await copyDirectoryMissing(source, target);
+      const nested = await copyDirectoryMissing(source, target, relative);
       copied.push(...nested);
       continue;
     }
 
     if (!(await pathExists(target))) {
       await copyFile(source, target);
-      copied.push(basename(target));
+      copied.push(relative);
     }
   }
 

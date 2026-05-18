@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { join } from "node:path";
 import { configPathForState, createConfig, defaultStateDir, defaultWorkspaceDir, loadConfig, saveConfig } from "../config.js";
@@ -111,12 +111,19 @@ async function checkProvider(checks: IDoctorCheck[], config: INeonConfig): Promi
     return;
   }
 
+  const envPath = join(config.stateDir, ".env");
+  const stateEnvValue = await readEnvValue(envPath, apiKeyEnv);
   if (process.env[apiKeyEnv] !== undefined && process.env[apiKeyEnv]?.length !== 0) {
     checks.push(ok("provider", `${config.provider.kind} env is present: ${apiKeyEnv}`));
     return;
   }
 
-  checks.push(warn("provider", `${config.provider.kind} env is missing: ${apiKeyEnv}`, `Export ${apiKeyEnv} before starting the runtime.`));
+  if (stateEnvValue !== undefined && stateEnvValue.length > 0) {
+    checks.push(ok("provider", `${config.provider.kind} env is present in local state env: ${apiKeyEnv}`));
+    return;
+  }
+
+  checks.push(warn("provider", `${config.provider.kind} env is missing: ${apiKeyEnv}`, `Add ${apiKeyEnv}=... to ${envPath} or export it before starting the runtime.`));
 }
 
 async function checkDiscord(checks: IDoctorCheck[], config: INeonConfig): Promise<void> {
@@ -131,12 +138,18 @@ async function checkDiscord(checks: IDoctorCheck[], config: INeonConfig): Promis
     return;
   }
 
-  if (process.env[tokenEnv] === undefined || process.env[tokenEnv]?.length === 0) {
-    checks.push(warn("discord", `Discord token env is missing: ${tokenEnv}`, `Export ${tokenEnv} before using Discord.`));
+  if (process.env[tokenEnv] !== undefined && process.env[tokenEnv]?.length !== 0) {
+    checks.push(ok("discord", `Discord token env is present: ${tokenEnv}`));
     return;
   }
 
-  checks.push(ok("discord", `Discord token env is present: ${tokenEnv}`));
+  const stateEnvValue = await readEnvValue(join(config.stateDir, ".env"), tokenEnv);
+  if (stateEnvValue !== undefined && stateEnvValue.length > 0) {
+    checks.push(ok("discord", `Discord token env is present in local state env: ${tokenEnv}`));
+    return;
+  }
+
+  checks.push(warn("discord", `Discord token env is missing: ${tokenEnv}`, `Add ${tokenEnv}=... to ${join(config.stateDir, ".env")} or export it before using Discord.`));
 }
 
 async function checkLaunchAgent(checks: IDoctorCheck[], config: INeonConfig): Promise<void> {
@@ -178,4 +191,30 @@ function fail(id: string, message: string, fix: string): IDoctorCheck {
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+async function readEnvValue(path: string, key: string): Promise<string | undefined> {
+  if (!(await pathExists(path))) {
+    return undefined;
+  }
+
+  const raw = await readFile(path, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("#") || !trimmed.startsWith(`${key}=`)) {
+      continue;
+    }
+
+    return stripEnvQuotes(trimmed.slice(key.length + 1).trim());
+  }
+
+  return undefined;
+}
+
+function stripEnvQuotes(value: string): string {
+  if (value.length >= 2 && ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")))) {
+    return value.slice(1, -1);
+  }
+
+  return value;
 }

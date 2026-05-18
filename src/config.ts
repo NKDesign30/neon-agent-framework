@@ -32,9 +32,9 @@ export function defaultWorkspaceDir(name: string): string {
 export function defaultModelForProvider(provider: ProviderKind): string {
   switch (provider) {
     case "openai":
-      return "gpt-5.5";
+      return "gpt-5.4";
     case "anthropic":
-      return "claude-sonnet-4.5";
+      return "claude-sonnet-4-5";
     case "openrouter":
       return "openrouter/auto";
     case "none":

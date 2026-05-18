@@ -6,20 +6,22 @@ This is not a copy of a private Neon system. It contains no private memories, so
 
 ## Install
 
-Install from GitHub:
+Install with the public installer:
 
 ```bash
-npm install -g github:NKDesign30/neon-agent-framework#v0.1.4
-neon onboard --install-daemon
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash
 ```
 
-Installer:
+Manual GitHub install before the npm release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/dev/scripts/install.sh | bash
+TMP_DIR="$(mktemp -d)"
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.5 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.5.tgz
+rm -rf "$TMP_DIR"
 ```
 
-The package is not published to the npm registry yet. Use the tagged GitHub install until the first npm release.
+Direct `npm install -g github:...` is intentionally not the primary path because npm can install from a stale Git cache and leave `dist/cli.js` missing. The installer packs the tagged repo first and installs that tarball.
 
 Local development:
 
@@ -34,6 +36,7 @@ node dist/cli.js onboard
 ```bash
 neon onboard
 neon doctor
+neon run "Sag kurz hallo"
 neon start
 ```
 
@@ -53,7 +56,9 @@ neon onboard \
 ```bash
 neon onboard              # create config, env, workspace, starter files
 neon doctor               # validate local setup
+neon run "prompt"         # run one provider-backed prompt
 neon start                # run the local runtime
+neon start --prompt "..." # start runtime and run a prompt smoke
 neon daemon install       # install macOS LaunchAgent
 neon daemon status        # inspect daemon config
 neon daemon restart       # restart LaunchAgent
@@ -111,5 +116,5 @@ If `dist/cli.js` is missing after a GitHub install, clear the local Git install 
 ```bash
 npm uninstall -g neon-agent-framework || true
 npm cache clean --force
-npm install -g github:NKDesign30/neon-agent-framework#v0.1.4
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
 ```

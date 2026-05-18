@@ -6,7 +6,8 @@ Run:
 
 ```bash
 neon doctor
-neon start
+neon run "Say hello"
+neon start --once
 ```
 
 Configure channels in `~/.neon-agent/config.json`.

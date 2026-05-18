@@ -47,6 +47,8 @@ export interface IRuntimeStatus {
   startedAt: string;
   stateDir: string;
   workspaceDir: string;
+  provider: ProviderKind;
+  model: string;
   approvalMode: ApprovalMode;
 }
 
