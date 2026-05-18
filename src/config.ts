@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { ensureDir, readJsonUnknown, resolvePath, writeJson } from "./fs.js";
 import type { ApprovalMode, IApprovalPolicy, IDiscordConfig, INeonConfig, IProviderConfig, ProviderKind } from "./types.js";
 
-const PROVIDERS = new Set<ProviderKind>(["openai", "anthropic", "openrouter", "none"]);
+const PROVIDERS = new Set<ProviderKind>(["openai", "anthropic", "openrouter", "cli", "none"]);
 const APPROVAL_MODES = new Set<ApprovalMode>(["prompt", "strict"]);
 
 export interface ICreateConfigInput {
@@ -12,6 +12,8 @@ export interface ICreateConfigInput {
   workspaceDir: string;
   provider: ProviderKind;
   model?: string;
+  cliCommand?: string;
+  cliArgs?: string[];
   discordTokenEnv?: string;
   discordChannelId?: string;
   approvalMode?: ApprovalMode;
@@ -37,6 +39,8 @@ export function defaultModelForProvider(provider: ProviderKind): string {
       return "claude-sonnet-4-5";
     case "openrouter":
       return "openrouter/auto";
+    case "cli":
+      return "claude";
     case "none":
       return "local-demo";
   }
@@ -50,6 +54,8 @@ export function apiKeyEnvForProvider(provider: ProviderKind): string | undefined
       return "ANTHROPIC_API_KEY";
     case "openrouter":
       return "OPENROUTER_API_KEY";
+    case "cli":
+      return undefined;
     case "none":
       return undefined;
   }
@@ -61,13 +67,7 @@ export function createConfig(input: ICreateConfigInput): INeonConfig {
   const workspaceDir = resolvePath(input.workspaceDir);
   const logDir = join(stateDir, "logs");
   const model = input.model ?? defaultModelForProvider(input.provider);
-  const providerBase: IProviderConfig = {
-    kind: input.provider,
-    model
-  };
-  const apiKeyEnv = apiKeyEnvForProvider(input.provider);
-  const provider: IProviderConfig =
-    apiKeyEnv === undefined ? providerBase : { ...providerBase, apiKeyEnv };
+  const provider = createProviderConfig(input.provider, model, input.cliCommand, input.cliArgs);
 
   const discordBase: IDiscordConfig = {
     enabled: input.discordTokenEnv !== undefined || input.discordChannelId !== undefined
@@ -174,9 +174,44 @@ export function envTemplate(): string {
 # OPENAI_API_KEY=<openai-api-key>
 # ANTHROPIC_API_KEY=<anthropic-api-key>
 # OPENROUTER_API_KEY=<openrouter-api-key>
+# CLI providers reuse local auth from tools like claude or codex.
 # DISCORD_BOT_TOKEN=
 # DISCORD_CHANNEL_ID=
 `;
+}
+
+function createProviderConfig(provider: ProviderKind, model: string, cliCommand?: string, cliArgs?: string[]): IProviderConfig {
+  const providerBase: IProviderConfig = {
+    kind: provider,
+    model
+  };
+
+  if (provider === "cli") {
+    const defaults = cliDefaultsForModel(model);
+    return {
+      ...providerBase,
+      command: cliCommand ?? defaults.command,
+      args: cliArgs ?? defaults.args
+    };
+  }
+
+  const apiKeyEnv = apiKeyEnvForProvider(provider);
+  return apiKeyEnv === undefined ? providerBase : { ...providerBase, apiKeyEnv };
+}
+
+function cliDefaultsForModel(model: string): { command: string; args: string[] } {
+  const normalized = model.trim().toLowerCase();
+  if (normalized === "codex" || normalized === "codex-cli") {
+    return {
+      command: "codex",
+      args: ["exec", "{prompt}"]
+    };
+  }
+
+  return {
+    command: "claude",
+    args: ["-p", "{prompt}"]
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -208,7 +243,15 @@ function isProviderConfig(value: unknown): value is IProviderConfig {
     return false;
   }
 
-  return value.apiKeyEnv === undefined || isNonEmptyString(value.apiKeyEnv);
+  if (value.kind === "cli") {
+    return isNonEmptyString(value.command)
+      && (value.args === undefined || isStringArray(value.args))
+      && value.apiKeyEnv === undefined;
+  }
+
+  const apiKeyOk = value.apiKeyEnv === undefined || isNonEmptyString(value.apiKeyEnv);
+  const cliFieldsAbsent = value.command === undefined && value.args === undefined;
+  return apiKeyOk && cliFieldsAbsent;
 }
 
 function isDiscordConfig(value: unknown): value is IDiscordConfig {

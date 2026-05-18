@@ -1,4 +1,4 @@
-export type ProviderKind = "openai" | "anthropic" | "openrouter" | "none";
+export type ProviderKind = "openai" | "anthropic" | "openrouter" | "cli" | "none";
 
 export type ApprovalMode = "prompt" | "strict";
 
@@ -6,6 +6,8 @@ export interface IProviderConfig {
   kind: ProviderKind;
   model: string;
   apiKeyEnv?: string;
+  command?: string;
+  args?: string[];
 }
 
 export interface IDiscordConfig {

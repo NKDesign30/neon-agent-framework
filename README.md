@@ -16,8 +16,8 @@ Manual GitHub install before the npm release:
 
 ```bash
 TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.7 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.7.tgz
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.8 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.8.tgz
 rm -rf "$TMP_DIR"
 ```
 
@@ -44,6 +44,31 @@ neon task add "Erste eigene Aufgabe"
 neon start
 ```
 
+The interactive onboarding first asks how the model should run:
+
+- `local`: existing terminal tools like Claude Code or Codex.
+- `api`: API-key backed providers like OpenAI, Anthropic, or OpenRouter.
+- `none`: install the framework without model calls first.
+
+Local terminal setup, like Claude Code or Codex users usually run:
+
+```bash
+neon onboard --provider cli --model claude
+neon run "Sag kurz hallo"
+
+neon onboard --provider cli --model codex --force
+neon run "Sag kurz hallo"
+```
+
+For daemon usage, prefer an absolute command path:
+
+```bash
+neon onboard \
+  --provider cli \
+  --model claude \
+  --cli-command "$(command -v claude)"
+```
+
 Non-interactive setup for Docker/CI:
 
 ```bash
@@ -62,6 +87,7 @@ neon onboard              # create config, env, workspace, starter files
 neon doctor               # validate local setup
 neon blueprint            # print builder roadmap for the local owner AI
 neon run "prompt"         # run one provider-backed prompt
+neon run --no-progress "prompt" # run without the interactive progress indicator
 neon memory init          # create the local SQLite memory database
 neon memory add ...       # add owned context
 neon memory search ...    # search owned context
@@ -84,6 +110,8 @@ neon daemon uninstall     # remove LaunchAgent
 - No direct sending without a configured channel and explicit policy.
 - No main/master workflow assumptions.
 - Secrets stay in env vars or local state, never in the repo.
+- CLI providers call local tools without shell expansion.
+- Long `neon run` calls show a small progress indicator by default.
 - The daemon is generated from the local user's config.
 
 ## Repo Shape
@@ -109,6 +137,7 @@ npm run smoke
 ```
 
 See [GitHub install](docs/github-install.md) before publishing the first release.
+See [CLI provider](docs/cli-provider.md) for Claude Code, Codex, and custom local tools.
 
 ## Troubleshooting
 

@@ -9,6 +9,7 @@ The framework assumes real messaging surfaces are untrusted.
 - High-risk actions require explicit approval.
 - Secrets are env references, not config values.
 - Generated daemon files point to local user state only.
+- CLI providers are executed with `spawn`, not through a shell.
 
 ## Recommended Policies
 
@@ -21,3 +22,5 @@ Never publish:
 - customer data
 - local absolute paths from a private machine
 - private Discord guild/channel IDs
+
+When using `provider.kind = "cli"`, prefer an absolute command path for daemons and keep the args list explicit. Use `{prompt}` as the prompt placeholder. If no placeholder is present, the prompt is appended as the final argument.

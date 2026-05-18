@@ -1,3 +1,15 @@
+const BOOLEAN_FLAGS = new Set([
+    "fix",
+    "force",
+    "help",
+    "install-daemon",
+    "json",
+    "no-load",
+    "no-progress",
+    "non-interactive",
+    "once",
+    "repair"
+]);
 export function parseFlags(args) {
     const values = {};
     const positional = [];
@@ -18,6 +30,10 @@ export function parseFlags(args) {
         if (eqIndex >= 0) {
             const key = rawName.slice(0, eqIndex);
             values[key] = rawName.slice(eqIndex + 1);
+            continue;
+        }
+        if (BOOLEAN_FLAGS.has(rawName)) {
+            values[rawName] = true;
             continue;
         }
         const next = args[index + 1];

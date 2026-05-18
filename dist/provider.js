@@ -1,8 +1,10 @@
+import { spawn } from "node:child_process";
 import { appendFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ensureDir, writeJson } from "./fs.js";
 import { requireEnvValue } from "./localEnv.js";
 const DEFAULT_MAX_OUTPUT_TOKENS = 800;
+const DEFAULT_CLI_TIMEOUT_MS = 120_000;
 export async function runAgentPrompt(config, prompt) {
     const cleanPrompt = prompt.trim();
     if (cleanPrompt.length === 0) {
@@ -32,7 +34,25 @@ async function callConfiguredProvider(config, prompt) {
             return callAnthropic(config, prompt);
         case "openrouter":
             return callOpenRouter(config, prompt);
+        case "cli":
+            return callCli(config, prompt);
     }
+}
+async function callCli(config, prompt) {
+    const command = config.provider.command;
+    if (command === undefined || command.trim().length === 0) {
+        throw new Error("CLI provider command is missing.");
+    }
+    const templateArgs = config.provider.args ?? ["{prompt}"];
+    const args = expandCliArgs(templateArgs, prompt);
+    const result = await execCli(command, args, config.workspaceDir, DEFAULT_CLI_TIMEOUT_MS);
+    if (result.stdout.trim().length > 0) {
+        return result.stdout.trim();
+    }
+    if (result.stderr.trim().length > 0) {
+        return result.stderr.trim();
+    }
+    throw new Error("CLI provider returned no output.");
 }
 async function callOpenAi(config, prompt) {
     const apiKey = await requireProviderApiKey(config);
@@ -102,6 +122,61 @@ async function postJson(url, headers, body) {
         throw new Error(`${response.status} ${response.statusText} from ${url}: ${details}`);
     }
     return payload;
+}
+function expandCliArgs(args, prompt) {
+    let usedPromptPlaceholder = false;
+    const expanded = args.map((arg) => {
+        if (!arg.includes("{prompt}")) {
+            return arg;
+        }
+        usedPromptPlaceholder = true;
+        return arg.replaceAll("{prompt}", prompt);
+    });
+    return usedPromptPlaceholder ? expanded : [...expanded, prompt];
+}
+async function execCli(command, args, cwd, timeoutMs) {
+    return new Promise((resolve, reject) => {
+        const child = spawn(command, args, {
+            cwd,
+            env: process.env,
+            shell: false,
+            stdio: ["ignore", "pipe", "pipe"]
+        });
+        let stdout = "";
+        let stderr = "";
+        let timedOut = false;
+        const timeout = setTimeout(() => {
+            timedOut = true;
+            child.kill("SIGTERM");
+        }, timeoutMs);
+        child.stdout.on("data", (chunk) => {
+            stdout += chunk.toString();
+        });
+        child.stderr.on("data", (chunk) => {
+            stderr += chunk.toString();
+        });
+        child.once("error", (error) => {
+            clearTimeout(timeout);
+            reject(error);
+        });
+        child.once("close", (code, signal) => {
+            clearTimeout(timeout);
+            if (timedOut) {
+                reject(new Error(`CLI provider timed out after ${timeoutMs}ms: ${command}`));
+                return;
+            }
+            if (code !== 0) {
+                const details = trimCliError(stderr.length > 0 ? stderr : stdout);
+                reject(new Error(`CLI provider exited with ${code ?? signal ?? "unknown"}: ${details}`));
+                return;
+            }
+            resolve({ stdout, stderr });
+        });
+    });
+}
+function trimCliError(value) {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed.slice(0, 1_000) : "no output";
 }
 function parseJsonResponse(text, url) {
     try {

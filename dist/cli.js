@@ -18,6 +18,7 @@ Commands:
   onboard              Create config, env, workspace, starter files
   doctor               Validate local setup
   run <prompt>         Run one provider-backed agent prompt
+    --no-progress      Disable the interactive progress indicator
   memory <command>     Manage local SQLite memory
   task <command>       Manage local agent tasks
   discord send <text>  Send an explicit Discord message

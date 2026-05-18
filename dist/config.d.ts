@@ -5,6 +5,8 @@ export interface ICreateConfigInput {
     workspaceDir: string;
     provider: ProviderKind;
     model?: string;
+    cliCommand?: string;
+    cliArgs?: string[];
     discordTokenEnv?: string;
     discordChannelId?: string;
     approvalMode?: ApprovalMode;

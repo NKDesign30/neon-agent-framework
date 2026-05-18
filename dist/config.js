@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { ensureDir, readJsonUnknown, resolvePath, writeJson } from "./fs.js";
-const PROVIDERS = new Set(["openai", "anthropic", "openrouter", "none"]);
+const PROVIDERS = new Set(["openai", "anthropic", "openrouter", "cli", "none"]);
 const APPROVAL_MODES = new Set(["prompt", "strict"]);
 export function defaultStateDir() {
     return resolvePath(process.env.NEON_AGENT_STATE_DIR ?? "~/.neon-agent");
@@ -20,6 +20,8 @@ export function defaultModelForProvider(provider) {
             return "claude-sonnet-4-5";
         case "openrouter":
             return "openrouter/auto";
+        case "cli":
+            return "claude";
         case "none":
             return "local-demo";
     }
@@ -32,6 +34,8 @@ export function apiKeyEnvForProvider(provider) {
             return "ANTHROPIC_API_KEY";
         case "openrouter":
             return "OPENROUTER_API_KEY";
+        case "cli":
+            return undefined;
         case "none":
             return undefined;
     }
@@ -42,12 +46,7 @@ export function createConfig(input) {
     const workspaceDir = resolvePath(input.workspaceDir);
     const logDir = join(stateDir, "logs");
     const model = input.model ?? defaultModelForProvider(input.provider);
-    const providerBase = {
-        kind: input.provider,
-        model
-    };
-    const apiKeyEnv = apiKeyEnvForProvider(input.provider);
-    const provider = apiKeyEnv === undefined ? providerBase : { ...providerBase, apiKeyEnv };
+    const provider = createProviderConfig(input.provider, model, input.cliCommand, input.cliArgs);
     const discordBase = {
         enabled: input.discordTokenEnv !== undefined || input.discordChannelId !== undefined
     };
@@ -139,9 +138,39 @@ export function envTemplate() {
 # OPENAI_API_KEY=<openai-api-key>
 # ANTHROPIC_API_KEY=<anthropic-api-key>
 # OPENROUTER_API_KEY=<openrouter-api-key>
+# CLI providers reuse local auth from tools like claude or codex.
 # DISCORD_BOT_TOKEN=
 # DISCORD_CHANNEL_ID=
 `;
+}
+function createProviderConfig(provider, model, cliCommand, cliArgs) {
+    const providerBase = {
+        kind: provider,
+        model
+    };
+    if (provider === "cli") {
+        const defaults = cliDefaultsForModel(model);
+        return {
+            ...providerBase,
+            command: cliCommand ?? defaults.command,
+            args: cliArgs ?? defaults.args
+        };
+    }
+    const apiKeyEnv = apiKeyEnvForProvider(provider);
+    return apiKeyEnv === undefined ? providerBase : { ...providerBase, apiKeyEnv };
+}
+function cliDefaultsForModel(model) {
+    const normalized = model.trim().toLowerCase();
+    if (normalized === "codex" || normalized === "codex-cli") {
+        return {
+            command: "codex",
+            args: ["exec", "{prompt}"]
+        };
+    }
+    return {
+        command: "claude",
+        args: ["-p", "{prompt}"]
+    };
 }
 function isRecord(value) {
     return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -165,7 +194,14 @@ function isProviderConfig(value) {
     if (!isProviderKind(value.kind) || !isNonEmptyString(value.model)) {
         return false;
     }
-    return value.apiKeyEnv === undefined || isNonEmptyString(value.apiKeyEnv);
+    if (value.kind === "cli") {
+        return isNonEmptyString(value.command)
+            && (value.args === undefined || isStringArray(value.args))
+            && value.apiKeyEnv === undefined;
+    }
+    const apiKeyOk = value.apiKeyEnv === undefined || isNonEmptyString(value.apiKeyEnv);
+    const cliFieldsAbsent = value.command === undefined && value.args === undefined;
+    return apiKeyOk && cliFieldsAbsent;
 }
 function isDiscordConfig(value) {
     if (!isRecord(value) || typeof value.enabled !== "boolean") {

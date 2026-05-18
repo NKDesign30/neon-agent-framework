@@ -2,6 +2,19 @@ import type { ICliFlags } from "./types.js";
 
 export type { ICliFlags } from "./types.js";
 
+const BOOLEAN_FLAGS = new Set([
+  "fix",
+  "force",
+  "help",
+  "install-daemon",
+  "json",
+  "no-load",
+  "no-progress",
+  "non-interactive",
+  "once",
+  "repair"
+]);
+
 export function parseFlags(args: string[]): ICliFlags {
   const values: Record<string, string | boolean> = {};
   const positional: string[] = [];
@@ -26,6 +39,11 @@ export function parseFlags(args: string[]): ICliFlags {
     if (eqIndex >= 0) {
       const key = rawName.slice(0, eqIndex);
       values[key] = rawName.slice(eqIndex + 1);
+      continue;
+    }
+
+    if (BOOLEAN_FLAGS.has(rawName)) {
+      values[rawName] = true;
       continue;
     }
 

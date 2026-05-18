@@ -8,10 +8,13 @@ The onboarding flow should let a new user create an owned agent instance without
 2. Create `~/.neon-agent/config.json`.
 3. Create `~/.neon-agent/.env` from the public example.
 4. Create a workspace with starter docs and empty owner-controlled v3 areas.
-5. Configure provider selection by env var reference.
-6. Configure Discord token env name and target channel.
-7. Set approval defaults.
-8. Run doctor and report next commands.
+5. Ask for the model access path: `local`, `api`, or `none`.
+6. For `local`, choose `claude`, `codex`, or `custom`.
+7. For `api`, choose `openai`, `anthropic`, or `openrouter`.
+8. Configure provider selection by env var reference or local CLI command.
+9. Configure Discord token env name and target channel.
+10. Set approval defaults.
+11. Run doctor and report next commands.
 
 ## Workspace Shape
 
@@ -38,11 +41,15 @@ The generated workspace is intentionally empty but v3-shaped:
 
 ```bash
 neon run "Sag kurz hallo"
+neon onboard --provider cli --model claude
+neon run "Sag kurz hallo über Claude CLI"
 neon memory add --title "Erste Erinnerung" --body "Mein Agent ist installiert."
 neon memory search "installiert"
 neon task add "Erste eigene Aufgabe"
 neon task list
 ```
+
+Long provider calls show a small terminal progress indicator by default. Scripts can disable it with `neon run --no-progress "..."`.
 
 Discord is explicit and user-triggered:
 

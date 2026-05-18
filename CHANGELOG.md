@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.8 - 2026-05-18
+
+- Add `cli` provider support for local tools such as Claude Code and Codex.
+- Add configurable CLI command and argument templates with `{prompt}` placeholder support.
+- Add doctor checks for local CLI executables.
+- Add an interactive progress indicator for long `neon run` calls.
+
 ## 0.1.7 - 2026-05-18
 
 - Add install-time local SQLite memory database with FTS search.
