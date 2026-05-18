@@ -138,6 +138,7 @@ npm run smoke
 
 See [GitHub install](docs/github-install.md) before publishing the first release.
 See [CLI provider](docs/cli-provider.md) for Claude Code, Codex, and custom local tools.
+See [Claude GitHub Action](docs/claude-github-action.md) for `@claude` issue and PR automation.
 
 ## Troubleshooting
 

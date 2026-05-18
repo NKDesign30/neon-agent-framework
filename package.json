@@ -1,6 +1,6 @@
 {
   "name": "neon-agent-framework",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": false,
   "description": "Public-safe Neon-style agent runtime framework with onboarding, approvals, Discord wiring, and daemon tooling.",
   "type": "module",

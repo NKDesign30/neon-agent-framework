@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9 - 2026-05-18
+
+- Add the Claude Code GitHub Action workflow for `@claude` issue and pull request comments.
+- Add repository-level `CLAUDE.md` guardrails for public-safe AI changes.
+- Document required GitHub app and `ANTHROPIC_API_KEY` setup.
+
 ## 0.1.8 - 2026-05-18
 
 - Add `cli` provider support for local tools such as Claude Code and Codex.
