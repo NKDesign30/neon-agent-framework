@@ -12,16 +12,19 @@ Install with the public installer:
 curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash
 ```
 
-Manual GitHub install before the npm release:
+CLI-only reinstall without onboarding:
 
 ```bash
-TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.13 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.13.tgz
-rm -rf "$TMP_DIR"
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
 ```
 
-Direct `npm install -g github:...` is intentionally not the primary path because npm can install from a stale Git cache and leave `dist/cli.js` missing. The installer packs the tagged repo first and installs that tarball.
+Direct `npm install -g github:...` is intentionally not the primary path because npm can install from a stale Git cache and leave `dist/cli.js` missing. The installer packs the current main ref first and installs that tarball.
+
+If an older global install blocks npm with `ENOTEMPTY: directory not empty, rename .../neon-agent-framework`, run the installer instead of direct `npm install -g github:...`. It removes only the old `neon-agent-framework` global package directory and stale npm rename directories before installing the fresh tarball:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
+```
 
 Local development:
 
@@ -168,10 +171,9 @@ hash -r
 neon --help
 ```
 
-If `dist/cli.js` is missing after a GitHub install, clear the local Git install cache and reinstall the current tag:
+If `dist/cli.js` is missing after a GitHub install, clear the local Git install cache and reinstall from current main:
 
 ```bash
-npm uninstall -g neon-agent-framework || true
 npm cache clean --force
 curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
 ```

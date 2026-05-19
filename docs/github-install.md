@@ -1,12 +1,9 @@
 # GitHub Install
 
-Before the first npm release, install from a packed GitHub tarball:
+Before the first npm release, install with the public installer:
 
 ```bash
-TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.13 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.13.tgz
-rm -rf "$TMP_DIR"
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash
 neon onboard
 neon doctor
 neon run "Sag kurz hallo"
@@ -24,7 +21,7 @@ npm link
 neon onboard
 ```
 
-The repository includes the built `dist/` output, but direct `npm install -g github:...` is not the recommended consumer path. Some npm versions install from a stale Git cache and create a global `neon` symlink that points at a missing `dist/cli.js`. Packing first makes npm consume the same tarball shape that a registry release would use.
+The repository includes the built `dist/` output, but direct `npm install -g github:...` is not the recommended consumer path. Some npm versions install from a stale Git cache, leave `dist/cli.js` missing, or fail with `ENOTEMPTY` when an old global package directory blocks npm's rename step. The installer cleans the old `neon-agent-framework` global package directory, packs the current main ref first, and installs that tarball.
 
 ## `neon` Command Not Found
 
@@ -44,11 +41,19 @@ neon --help
 
 ## Missing `dist/cli.js`
 
-If npm reports success but the generated `neon` command points at a missing `dist/cli.js`, the npm Git cache likely kept a broken checkout. Reinstall the current tag from a clean cache:
+If npm reports success but the generated `neon` command points at a missing `dist/cli.js`, the npm Git cache likely kept a broken checkout. Reinstall from current main with a clean cache:
 
 ```bash
-npm uninstall -g neon-agent-framework || true
 npm cache clean --force
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
+neon --help
+```
+
+## Old Global Directory Blocks Install
+
+If npm fails with `ENOTEMPTY: directory not empty, rename .../node_modules/neon-agent-framework`, do not retry direct `npm install -g github:...`. Use the installer; it removes only the stale Neon package directories under npm's global root and leaves unrelated packages alone:
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
 neon --help
 ```
