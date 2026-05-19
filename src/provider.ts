@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { appendFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { defaultCliArgsForModel } from "./config.js";
 import { ensureDir, writeJson } from "./fs.js";
 import { requireEnvValue } from "./localEnv.js";
 import type { ICliProviderFallbackConfig, INeonConfig, ProviderKind } from "./types.js";
@@ -83,7 +84,7 @@ async function callCli(config: INeonConfig, prompt: string): Promise<IProviderCa
     throw new Error("CLI provider command is missing.");
   }
 
-  const templateArgs = config.provider.args ?? ["{prompt}"];
+  const templateArgs = config.provider.args ?? defaultCliArgsForModel(config.provider.model);
   const timeoutMs = config.provider.timeoutMs ?? DEFAULT_CLI_TIMEOUT_MS;
   try {
     return await callCliCommand(command, templateArgs, config.provider.model, prompt, config.workspaceDir, timeoutMs);
@@ -102,7 +103,7 @@ async function callCli(config: INeonConfig, prompt: string): Promise<IProviderCa
 }
 
 async function callCliFallback(fallback: ICliProviderFallbackConfig, prompt: string, cwd: string, primaryTimeoutMs: number): Promise<IProviderCallResult> {
-  return callCliCommand(fallback.command, fallback.args ?? ["{prompt}"], fallback.model, prompt, cwd, fallback.timeoutMs ?? primaryTimeoutMs);
+  return callCliCommand(fallback.command, fallback.args ?? defaultCliArgsForModel(fallback.model), fallback.model, prompt, cwd, fallback.timeoutMs ?? primaryTimeoutMs);
 }
 
 async function callCliCommand(command: string, templateArgs: readonly string[], model: string, prompt: string, cwd: string, timeoutMs: number): Promise<IProviderCallResult> {

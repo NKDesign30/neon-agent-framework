@@ -243,21 +243,59 @@ async function checkConfiguredCliFallback(checks: IDoctorCheck[], config: INeonC
   }
 
   checks.push(ok("provider-fallback", `CLI fallback command is executable: ${resolvedCommand}`));
-  if (isExplicitCommandPath(fallback.command)) {
-    return false;
-  }
+  let changed = false;
+  let nextFallback = fallback;
 
-  if (!fix) {
+  if (!isExplicitCommandPath(fallback.command) && !fix) {
     checks.push(warn("provider-fallback-path", `CLI fallback command is resolved through PATH: ${fallback.command}`, "Run `neon doctor --fix` to store an absolute fallback command for daemon usage."));
+  } else if (!isExplicitCommandPath(fallback.command)) {
+    nextFallback = {
+      ...nextFallback,
+      command: resolvedCommand
+    };
+    checks.push(ok("provider-fallback-path", `Stored absolute CLI fallback command: ${resolvedCommand}`));
+    changed = true;
+  }
+
+  const repairedArgs = repairCodexCliArgs(nextFallback.model, nextFallback.args);
+  if (repairedArgs !== undefined && !fix) {
+    checks.push(warn("provider-fallback-args", "Codex CLI fallback args are missing --skip-git-repo-check.", "Run `neon doctor --fix` to repair Codex fallback args."));
+  } else if (repairedArgs !== undefined) {
+    nextFallback = {
+      ...nextFallback,
+      args: repairedArgs
+    };
+    checks.push(ok("provider-fallback-args", "Stored Codex CLI fallback args with --skip-git-repo-check."));
+    changed = true;
+  }
+
+  if (!changed) {
     return false;
   }
 
-  config.provider.fallback = {
-    ...fallback,
-    command: resolvedCommand
-  };
-  checks.push(ok("provider-fallback-path", `Stored absolute CLI fallback command: ${resolvedCommand}`));
+  config.provider.fallback = nextFallback;
   return true;
+}
+
+function repairCodexCliArgs(model: string, args?: string[]): string[] | undefined {
+  const normalizedModel = model.trim().toLowerCase();
+  if (normalizedModel !== "codex" && normalizedModel !== "codex-cli") {
+    return undefined;
+  }
+  if (args === undefined) {
+    return defaultCliArgsForModel("codex");
+  }
+  const resolvedArgs = args;
+  if (resolvedArgs[0] !== "exec" || resolvedArgs.includes("--skip-git-repo-check")) {
+    return undefined;
+  }
+  const promptIndex = resolvedArgs.indexOf("{prompt}");
+  if (promptIndex < 0) {
+    return undefined;
+  }
+  const nextArgs = [...resolvedArgs];
+  nextArgs.splice(promptIndex, 0, "--skip-git-repo-check");
+  return nextArgs;
 }
 
 function isClaudeCliProvider(config: INeonConfig): boolean {

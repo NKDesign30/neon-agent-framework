@@ -212,7 +212,7 @@ function cliDefaultsForModel(model: string): { command: string; args: string[] }
   if (normalized === "codex" || normalized === "codex-cli") {
     return {
       command: "codex",
-      args: ["exec", "{prompt}"]
+      args: ["exec", "--skip-git-repo-check", "{prompt}"]
     };
   }
 
