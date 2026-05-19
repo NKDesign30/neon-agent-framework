@@ -27,6 +27,9 @@ The generated workspace is intentionally empty but v3-shaped:
 - `channels/` for Discord, mail, WhatsApp, or other adapters.
 - `approvals/` for human approval records.
 - `runs/` for prompt/run artifacts.
+- `OPERATING.md` for public-safe task triage, updates, approvals, and handoff rules.
+- `channels/discord-operating-floor.md` for Discord-style message routing and progress behavior.
+- `agents/handoff-contract.md` for multi-agent continuation without branch conflicts.
 
 ## Non-Goals
 
@@ -56,3 +59,15 @@ Discord is explicit and user-triggered:
 ```bash
 neon discord send "Agent ist installiert."
 ```
+
+Before enabling a live Discord bot, read `channels/discord-operating-floor.md` in the generated workspace. It keeps greetings lightweight, tasks visible, raw logs local, and external actions approval-first.
+
+## Existing Installations
+
+For a workspace that was created before these starter files existed, update the CLI and run:
+
+```bash
+neon doctor --fix
+```
+
+Doctor installs missing starter playbooks only. It does not overwrite owner-edited workspace files.

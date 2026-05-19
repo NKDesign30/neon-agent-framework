@@ -14,6 +14,14 @@ neon task add "Create my first owned agent memory"
 neon start
 ```
 
+## Operating Defaults
+
+Read these before wiring a real channel:
+
+- `OPERATING.md` for task triage, updates, approvals, and handoffs.
+- `channels/discord-operating-floor.md` for Discord-style chat behavior.
+- `agents/handoff-contract.md` when another agent reviews or continues a slice.
+
 ## First Task
 
 Send a message to the agent runtime:

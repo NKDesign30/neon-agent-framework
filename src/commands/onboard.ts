@@ -5,9 +5,10 @@ import { join } from "node:path";
 import { createConfig, defaultCliCommandForModel, defaultModelForProvider, defaultStateDir, defaultWorkspaceDir, envTemplate, saveConfig } from "../config.js";
 import { installLaunchAgent } from "../launchagent.js";
 import { initMemoryDatabase } from "../memoryStore.js";
-import { copyDirectoryMissing, ensureDir, pathExists, resolvePath, writeFileIfMissing } from "../fs.js";
+import { ensureDir, pathExists, resolvePath, writeFileIfMissing } from "../fs.js";
 import { readBooleanFlag, readStringFlag, type ICliFlags } from "../args.js";
 import { resolveExecutable } from "../commandResolver.js";
+import { copyStarterWorkspaceMissing, ensureStarterWorkspaceDirs } from "../starterWorkspace.js";
 import type { ApprovalMode, ProviderKind } from "../types.js";
 
 export async function runOnboard(flags: ICliFlags): Promise<void> {
@@ -31,8 +32,7 @@ export async function runOnboard(flags: ICliFlags): Promise<void> {
   await writeFileIfMissing(join(config.stateDir, ".env"), envTemplate());
   await initMemoryDatabase(config);
 
-  const templateDir = fileURLToPath(new URL("../../templates/starter/", import.meta.url));
-  const copied = await copyDirectoryMissing(templateDir, config.workspaceDir);
+  const copied = await copyStarterWorkspaceMissing(config.workspaceDir);
   const savedPath = await saveConfig(config);
 
   console.log(`Created config: ${savedPath}`);
@@ -53,13 +53,6 @@ export async function runOnboard(flags: ICliFlags): Promise<void> {
   }
 
   console.log("Next: neon doctor && neon blueprint");
-}
-
-async function ensureStarterWorkspaceDirs(workspaceDir: string): Promise<void> {
-  const dirs = ["agents", "memory", "tasks", "skills", "channels", "approvals", "runs"];
-  for (const dir of dirs) {
-    await ensureDir(join(workspaceDir, dir));
-  }
 }
 
 function readNonInteractive(flags: ICliFlags): IOnboardAnswers {

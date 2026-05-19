@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.12 - 2026-05-19
+
+- Add public-safe operating defaults to starter workspaces: task triage, progress updates, Discord-style channel behavior, and multi-agent handoff contracts.
+- Let `neon doctor --fix` install missing starter playbooks for existing workspaces without overwriting owner files.
+- Extend the smoke test to verify that onboarding installs the operating playbooks and doctor can restore missing ones.
+
 ## 0.1.11 - 2026-05-18
 
 - Resolve local CLI provider commands to absolute paths during onboarding when the tool is available.

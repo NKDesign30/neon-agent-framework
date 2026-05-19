@@ -16,8 +16,8 @@ Manual GitHub install before the npm release:
 
 ```bash
 TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.11 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.11.tgz
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.12 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.12.tgz
 rm -rf "$TMP_DIR"
 ```
 
@@ -42,6 +42,19 @@ neon memory add --title "Erste Erinnerung" --body "Mein Agent ist installiert."
 neon memory search "installiert"
 neon task add "Erste eigene Aufgabe"
 neon start
+```
+
+`neon onboard` also creates operating playbooks in the workspace:
+
+- `OPERATING.md` for triage, progress updates, approval-first work, and handoffs.
+- `channels/discord-operating-floor.md` for calm Discord/chat behavior.
+- `agents/handoff-contract.md` for safe multi-agent continuation.
+
+Existing installations can pull in newly added starter playbooks without overwriting their workspace files:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
+neon doctor --fix
 ```
 
 The interactive onboarding first asks how the model should run:
@@ -110,6 +123,7 @@ neon daemon uninstall     # remove LaunchAgent
 - CLI providers call local tools without shell expansion.
 - Long `neon run` calls show a small progress indicator by default.
 - The daemon is generated from the local user's config.
+- Starter workspaces include public-safe operating defaults for chat triage, progress updates, handoffs, and Discord-style channels.
 
 ## Repo Shape
 

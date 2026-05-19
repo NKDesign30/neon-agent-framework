@@ -8,6 +8,7 @@ import { launchAgentPath } from "../launchagent.js";
 import { readEnvValue } from "../localEnv.js";
 import { initMemoryDatabase, memoryDatabasePath } from "../memoryStore.js";
 import { readBooleanFlag, readStringFlag, type ICliFlags } from "../args.js";
+import { copyStarterWorkspaceMissing } from "../starterWorkspace.js";
 import type { IDoctorCheck, INeonConfig } from "../types.js";
 
 export async function runDoctor(flags: ICliFlags): Promise<void> {
@@ -45,6 +46,7 @@ export async function runDoctor(flags: ICliFlags): Promise<void> {
 
   if (config !== undefined) {
     await checkWritableDir(checks, "workspace", config.workspaceDir, fix);
+    await checkStarterWorkspace(checks, config, fix);
     await checkWritableDir(checks, "logs", config.logDir, fix);
     await checkEnvFile(checks, config, fix);
     await checkMemory(checks, config, fix);
@@ -64,6 +66,45 @@ export async function runDoctor(flags: ICliFlags): Promise<void> {
   if (checks.some((check) => !check.ok && check.severity === "error")) {
     process.exitCode = 1;
   }
+}
+
+async function checkStarterWorkspace(checks: IDoctorCheck[], config: INeonConfig, fix: boolean): Promise<void> {
+  const required = [
+    "AGENTS.md",
+    "BUILDER.md",
+    "OPERATING.md",
+    "channels/discord-operating-floor.md",
+    "agents/handoff-contract.md"
+  ];
+  const missing: string[] = [];
+
+  for (const file of required) {
+    if (!(await pathExists(join(config.workspaceDir, file)))) {
+      missing.push(file);
+    }
+  }
+
+  if (missing.length === 0) {
+    checks.push(ok("starter-workspace", "Starter workspace playbooks are installed."));
+    return;
+  }
+
+  if (!fix) {
+    checks.push(warn(
+      "starter-workspace",
+      `Starter workspace is missing: ${missing.join(", ")}`,
+      "Run `neon doctor --fix` to install missing starter playbooks without overwriting existing files."
+    ));
+    return;
+  }
+
+  const copied = await copyStarterWorkspaceMissing(config.workspaceDir);
+  checks.push(ok(
+    "starter-workspace",
+    copied.length > 0
+      ? `Installed missing starter files: ${copied.join(", ")}`
+      : "Starter workspace playbooks are installed."
+  ));
 }
 
 function checkNode(checks: IDoctorCheck[]): void {

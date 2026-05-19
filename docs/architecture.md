@@ -7,6 +7,7 @@ This framework is a public-safe Neo-style starter runtime. It gives the local ow
 - CLI: `neon` commands for setup, doctor checks, runtime smoke, memory, tasks, Discord, and daemon work.
 - State: `~/.neon-agent` by default. Contains config, local `.env`, logs, runs, tasks, and memory DB.
 - Workspace: `~/agent-name-workspace` by default. Contains owner-edited agents, memory notes, skills, channels, approvals, and builder docs.
+- Operating defaults: generated starter playbooks define task triage, progress updates, Discord-style channel behavior, and multi-agent handoff contracts.
 - Provider: OpenAI, Anthropic, OpenRouter, local CLI tools, or `none`.
 - Memory: local SQLite database with FTS search. It starts empty.
 - Channels: explicit user-triggered adapters. No hidden listeners or auto-send policies.
@@ -19,3 +20,4 @@ This framework is a public-safe Neo-style starter runtime. It gives the local ow
 - Outbound actions stay explicit.
 - Local CLI providers execute configured commands without shell interpolation.
 - Human approval is required for sending, pushing, deploying, writing remote state, or destructive account actions.
+- Public starter playbooks describe behavior only; they do not include private Neon memory, channel IDs, private prompts, or local machine paths.
