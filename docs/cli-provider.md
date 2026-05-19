@@ -23,7 +23,7 @@ Default config stores an absolute `command` path when the CLI is available durin
     "kind": "cli",
     "model": "codex",
     "command": "/opt/homebrew/bin/codex",
-    "args": ["exec", "{prompt}"]
+    "args": ["exec", "--skip-git-repo-check", "{prompt}"]
   }
 }
 ```
@@ -44,9 +44,20 @@ Default config stores an absolute `command` path when the CLI is available durin
   "kind": "cli",
   "model": "codex",
   "command": "/opt/homebrew/bin/codex",
-  "args": ["exec", "{prompt}"]
+  "args": ["exec", "--skip-git-repo-check", "{prompt}"]
 }
 ```
+
+## Context Scope For Gateways
+
+By default, CLI providers run with `cwd` set to the configured workspace. Tools like Claude Code may load project files from that directory. For real-time gateways, use a neutral cwd and pass only targeted context:
+
+```bash
+neon run --no-project-context "Kurze Antwort ohne Workspace-Scan"
+neon run --no-project-context --context-file AGENTS.md "Was gilt hier?"
+```
+
+`--no-project-context` runs the CLI from the state directory instead of the workspace. `--context-file` reads one file from the workspace, caps it at 128 KiB, and prepends it to the prompt. This keeps Discord-style requests responsive without losing the one file of context that matters.
 
 ## Custom CLI
 
@@ -68,4 +79,4 @@ neon doctor --fix
 
 That stores the absolute command path for macOS LaunchAgent usage. launchd has a smaller `PATH` than your terminal.
 
-For Claude Code configs, `doctor --fix` also adds a Codex fallback when the `codex` command is executable. Existing custom fallback commands are repaired to absolute paths the same way.
+For Claude Code configs, `doctor --fix` also adds a Codex fallback when the `codex` command is executable. Existing custom fallback commands are repaired to absolute paths the same way. Existing primary providers are preserved; `doctor --fix` only patches missing or clearly broken provider fields.

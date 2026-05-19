@@ -19,20 +19,24 @@ export interface IAgentRunResult {
   durationMs: number;
 }
 
+export interface IAgentRunOptions {
+  cwd?: string;
+}
+
 interface IProviderCallResult {
   provider: ProviderKind;
   model: string;
   output: string;
 }
 
-export async function runAgentPrompt(config: INeonConfig, prompt: string): Promise<IAgentRunResult> {
+export async function runAgentPrompt(config: INeonConfig, prompt: string, options: IAgentRunOptions = {}): Promise<IAgentRunResult> {
   const cleanPrompt = prompt.trim();
   if (cleanPrompt.length === 0) {
     throw new Error("Prompt is empty.");
   }
 
   const startedAt = performance.now();
-  const providerResult = await callConfiguredProvider(config, cleanPrompt);
+  const providerResult = await callConfiguredProvider(config, cleanPrompt, options);
   const result: IAgentRunResult = {
     id: crypto.randomUUID(),
     provider: providerResult.provider,
@@ -47,7 +51,7 @@ export async function runAgentPrompt(config: INeonConfig, prompt: string): Promi
   return result;
 }
 
-async function callConfiguredProvider(config: INeonConfig, prompt: string): Promise<IProviderCallResult> {
+async function callConfiguredProvider(config: INeonConfig, prompt: string, options: IAgentRunOptions): Promise<IProviderCallResult> {
   switch (config.provider.kind) {
     case "none":
       return {
@@ -74,11 +78,11 @@ async function callConfiguredProvider(config: INeonConfig, prompt: string): Prom
         output: await callOpenRouter(config, prompt)
       };
     case "cli":
-      return callCli(config, prompt);
+      return callCli(config, prompt, options);
   }
 }
 
-async function callCli(config: INeonConfig, prompt: string): Promise<IProviderCallResult> {
+async function callCli(config: INeonConfig, prompt: string, options: IAgentRunOptions): Promise<IProviderCallResult> {
   const command = config.provider.command;
   if (command === undefined || command.trim().length === 0) {
     throw new Error("CLI provider command is missing.");
@@ -86,8 +90,9 @@ async function callCli(config: INeonConfig, prompt: string): Promise<IProviderCa
 
   const templateArgs = config.provider.args ?? defaultCliArgsForModel(config.provider.model);
   const timeoutMs = config.provider.timeoutMs ?? DEFAULT_CLI_TIMEOUT_MS;
+  const cwd = options.cwd ?? config.workspaceDir;
   try {
-    return await callCliCommand(command, templateArgs, config.provider.model, prompt, config.workspaceDir, timeoutMs);
+    return await callCliCommand(command, templateArgs, config.provider.model, prompt, cwd, timeoutMs);
   } catch (error) {
     const fallback = config.provider.fallback;
     if (fallback === undefined) {
@@ -95,7 +100,7 @@ async function callCli(config: INeonConfig, prompt: string): Promise<IProviderCa
     }
 
     try {
-      return await callCliFallback(fallback, prompt, config.workspaceDir, timeoutMs);
+      return await callCliFallback(fallback, prompt, cwd, timeoutMs);
     } catch (fallbackError) {
       throw new Error(`CLI provider failed and fallback failed. Primary: ${formatProviderError(error)} Fallback: ${formatProviderError(fallbackError)}`);
     }

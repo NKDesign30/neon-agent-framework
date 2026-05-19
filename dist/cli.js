@@ -19,6 +19,10 @@ Commands:
   doctor               Validate local setup
   run <prompt>         Run one provider-backed agent prompt
     --no-progress      Disable the interactive progress indicator
+    --no-project-context
+                       Run CLI providers outside the workspace cwd
+    --context-file <path>
+                       Add one targeted workspace context file to the prompt
   memory <command>     Manage local SQLite memory
   task <command>       Manage local agent tasks
   discord send <text>  Send an explicit Discord message

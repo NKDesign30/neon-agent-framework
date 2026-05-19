@@ -8,4 +8,7 @@ export interface IAgentRunResult {
     createdAt: string;
     durationMs: number;
 }
-export declare function runAgentPrompt(config: INeonConfig, prompt: string): Promise<IAgentRunResult>;
+export interface IAgentRunOptions {
+    cwd?: string;
+}
+export declare function runAgentPrompt(config: INeonConfig, prompt: string, options?: IAgentRunOptions): Promise<IAgentRunResult>;
