@@ -52,3 +52,20 @@ npm cache clean --force
 curl -fsSL https://raw.githubusercontent.com/NKDesign30/neon-agent-framework/main/scripts/install.sh | bash -s -- --no-onboard
 neon --help
 ```
+
+## GitHub Issue Notifications To Discord
+
+The repository can notify Discord when a GitHub issue is opened or reopened. Add these repository secrets:
+
+```bash
+gh secret set DISCORD_BOT_TOKEN --repo NKDesign30/neon-agent-framework
+gh secret set DISCORD_ISSUE_NOTIFY_CHANNEL_ID --repo NKDesign30/neon-agent-framework --body "1503826726017437709"
+```
+
+The notification includes an `Open issue` link button, a `Fix issue` interaction button for the Neon Discord bot, and the exact fallback command to answer with in Discord, for example:
+
+```text
+fix github issue #4 in NKDesign30/neon-agent-framework
+```
+
+To resend an existing issue manually, run the `Discord Issue Notify` workflow with an `issue_number` input.

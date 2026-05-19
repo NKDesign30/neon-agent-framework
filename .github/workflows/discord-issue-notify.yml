@@ -1,0 +1,31 @@
+name: Discord Issue Notify
+
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to send to Discord
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.16"
+      - name: Send Discord issue notification
+        run: node scripts/notify-discord-issue.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_ISSUE_NOTIFY_CHANNEL_ID: ${{ secrets.DISCORD_ISSUE_NOTIFY_CHANNEL_ID }}
