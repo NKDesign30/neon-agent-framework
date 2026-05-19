@@ -49,16 +49,27 @@ const repairedConfig = JSON.parse(await readFile(configPath, "utf8"));
 if (repairedConfig.provider?.fallback?.model !== "codex") {
   throw new Error("doctor --fix did not install the Codex CLI fallback.");
 }
+if (!repairedConfig.provider.fallback.args?.includes("--skip-git-repo-check")) {
+  throw new Error("doctor --fix installed Codex fallback without --skip-git-repo-check.");
+}
 
-repairedConfig.provider.timeoutMs = 50;
-repairedConfig.provider.fallback = {
+repairedConfig.provider.fallback.args = ["exec", "{prompt}"];
+await writeFile(configPath, `${JSON.stringify(repairedConfig, null, 2)}\n`);
+await execFileAsync(process.execPath, [cliPath, "doctor", "--json", "--state-dir", stateDir, "--fix"], { env: doctorEnv });
+const rerepairedConfig = JSON.parse(await readFile(configPath, "utf8"));
+if (!rerepairedConfig.provider?.fallback?.args?.includes("--skip-git-repo-check")) {
+  throw new Error("doctor --fix did not repair legacy Codex fallback args.");
+}
+
+rerepairedConfig.provider.timeoutMs = 50;
+rerepairedConfig.provider.fallback = {
   kind: "cli",
   model: "codex-smoke",
   command: process.execPath,
   args: ["-e", "process.stdout.write(process.argv[1])", "{prompt}"],
   timeoutMs: 5000
 };
-await writeFile(configPath, `${JSON.stringify(repairedConfig, null, 2)}\n`);
+await writeFile(configPath, `${JSON.stringify(rerepairedConfig, null, 2)}\n`);
 
 const { stdout } = await execFileAsync(process.execPath, [
   cliPath,
