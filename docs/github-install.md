@@ -4,8 +4,8 @@ Before the first npm release, install from a packed GitHub tarball:
 
 ```bash
 TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.12 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.12.tgz
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.13 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.13.tgz
 rm -rf "$TMP_DIR"
 neon onboard
 neon doctor

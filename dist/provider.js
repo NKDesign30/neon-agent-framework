@@ -11,13 +11,13 @@ export async function runAgentPrompt(config, prompt) {
         throw new Error("Prompt is empty.");
     }
     const startedAt = performance.now();
-    const output = await callConfiguredProvider(config, cleanPrompt);
+    const providerResult = await callConfiguredProvider(config, cleanPrompt);
     const result = {
         id: crypto.randomUUID(),
-        provider: config.provider.kind,
-        model: config.provider.model,
+        provider: providerResult.provider,
+        model: providerResult.model,
         prompt: cleanPrompt,
-        output,
+        output: providerResult.output,
         createdAt: new Date().toISOString(),
         durationMs: Math.round(performance.now() - startedAt)
     };
@@ -27,13 +27,29 @@ export async function runAgentPrompt(config, prompt) {
 async function callConfiguredProvider(config, prompt) {
     switch (config.provider.kind) {
         case "none":
-            return `Provider none received: ${prompt}`;
+            return {
+                provider: "none",
+                model: config.provider.model,
+                output: `Provider none received: ${prompt}`
+            };
         case "openai":
-            return callOpenAi(config, prompt);
+            return {
+                provider: "openai",
+                model: config.provider.model,
+                output: await callOpenAi(config, prompt)
+            };
         case "anthropic":
-            return callAnthropic(config, prompt);
+            return {
+                provider: "anthropic",
+                model: config.provider.model,
+                output: await callAnthropic(config, prompt)
+            };
         case "openrouter":
-            return callOpenRouter(config, prompt);
+            return {
+                provider: "openrouter",
+                model: config.provider.model,
+                output: await callOpenRouter(config, prompt)
+            };
         case "cli":
             return callCli(config, prompt);
     }
@@ -44,13 +60,42 @@ async function callCli(config, prompt) {
         throw new Error("CLI provider command is missing.");
     }
     const templateArgs = config.provider.args ?? ["{prompt}"];
+    const timeoutMs = config.provider.timeoutMs ?? DEFAULT_CLI_TIMEOUT_MS;
+    try {
+        return await callCliCommand(command, templateArgs, config.provider.model, prompt, config.workspaceDir, timeoutMs);
+    }
+    catch (error) {
+        const fallback = config.provider.fallback;
+        if (fallback === undefined) {
+            throw error;
+        }
+        try {
+            return await callCliFallback(fallback, prompt, config.workspaceDir, timeoutMs);
+        }
+        catch (fallbackError) {
+            throw new Error(`CLI provider failed and fallback failed. Primary: ${formatProviderError(error)} Fallback: ${formatProviderError(fallbackError)}`);
+        }
+    }
+}
+async function callCliFallback(fallback, prompt, cwd, primaryTimeoutMs) {
+    return callCliCommand(fallback.command, fallback.args ?? ["{prompt}"], fallback.model, prompt, cwd, fallback.timeoutMs ?? primaryTimeoutMs);
+}
+async function callCliCommand(command, templateArgs, model, prompt, cwd, timeoutMs) {
     const args = expandCliArgs(templateArgs, prompt);
-    const result = await execCli(command, args, config.workspaceDir, DEFAULT_CLI_TIMEOUT_MS);
+    const result = await execCli(command, args, cwd, timeoutMs);
     if (result.stdout.trim().length > 0) {
-        return result.stdout.trim();
+        return {
+            provider: "cli",
+            model,
+            output: result.stdout.trim()
+        };
     }
     if (result.stderr.trim().length > 0) {
-        return result.stderr.trim();
+        return {
+            provider: "cli",
+            model,
+            output: result.stderr.trim()
+        };
     }
     throw new Error("CLI provider returned no output.");
 }
@@ -177,6 +222,9 @@ async function execCli(command, args, cwd, timeoutMs) {
 function trimCliError(value) {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed.slice(0, 1_000) : "no output";
+}
+function formatProviderError(error) {
+    return error instanceof Error ? error.message : String(error);
 }
 function parseJsonResponse(text, url) {
     try {

@@ -16,8 +16,8 @@ Manual GitHub install before the npm release:
 
 ```bash
 TMP_DIR="$(mktemp -d)"
-(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.12 --silent)
-npm install -g "$TMP_DIR"/neon-agent-framework-0.1.12.tgz
+(cd "$TMP_DIR" && npm pack github:NKDesign30/neon-agent-framework#v0.1.13 --silent)
+npm install -g "$TMP_DIR"/neon-agent-framework-0.1.13.tgz
 rm -rf "$TMP_DIR"
 ```
 
@@ -79,6 +79,8 @@ Onboarding stores an absolute CLI command path when `claude` or `codex` is avail
 neon doctor --fix
 ```
 
+When Claude Code is the primary local CLI and Codex is installed, `neon doctor --fix` also stores Codex as a fallback. If Claude times out or exits with an error, the runtime retries the prompt through Codex instead of dropping the Discord request.
+
 Non-interactive setup for Docker/CI:
 
 ```bash
@@ -121,6 +123,7 @@ neon daemon uninstall     # remove LaunchAgent
 - No main/master workflow assumptions.
 - Secrets stay in env vars or local state, never in the repo.
 - CLI providers call local tools without shell expansion.
+- CLI providers can use a configured fallback, for example Claude Code first and Codex on timeout.
 - Long `neon run` calls show a small progress indicator by default.
 - The daemon is generated from the local user's config.
 - Starter workspaces include public-safe operating defaults for chat triage, progress updates, handoffs, and Discord-style channels.

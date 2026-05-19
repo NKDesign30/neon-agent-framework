@@ -1,7 +1,7 @@
 import { access } from "node:fs/promises";
 import { constants } from "node:fs";
 import { join } from "node:path";
-import { configPathForState, createConfig, defaultStateDir, defaultWorkspaceDir, loadConfig, saveConfig } from "../config.js";
+import { configPathForState, createConfig, defaultCliArgsForModel, defaultStateDir, defaultWorkspaceDir, loadConfig, saveConfig } from "../config.js";
 import { isExplicitCommandPath, resolveExecutable } from "../commandResolver.js";
 import { ensureDir, pathExists, resolvePath } from "../fs.js";
 import { launchAgentPath } from "../launchagent.js";
@@ -9,7 +9,7 @@ import { readEnvValue } from "../localEnv.js";
 import { initMemoryDatabase, memoryDatabasePath } from "../memoryStore.js";
 import { readBooleanFlag, readStringFlag, type ICliFlags } from "../args.js";
 import { copyStarterWorkspaceMissing } from "../starterWorkspace.js";
-import type { IDoctorCheck, INeonConfig } from "../types.js";
+import type { ICliProviderFallbackConfig, IDoctorCheck, INeonConfig } from "../types.js";
 
 export async function runDoctor(flags: ICliFlags): Promise<void> {
   const json = readBooleanFlag(flags, "json");
@@ -177,6 +177,7 @@ async function checkCliProvider(checks: IDoctorCheck[], config: INeonConfig, fix
     return;
   }
 
+  let configChanged = false;
   const resolvedCommand = await resolveExecutable(command);
   if (resolvedCommand === undefined) {
     checks.push(fail("provider", `CLI provider command not found or not executable: ${command}`, "Install the CLI or set an absolute command with `--cli-command`."));
@@ -188,14 +189,81 @@ async function checkCliProvider(checks: IDoctorCheck[], config: INeonConfig, fix
   if (!isExplicitCommandPath(command)) {
     if (fix) {
       config.provider.command = resolvedCommand;
-      config.updatedAt = new Date().toISOString();
-      await saveConfig(config);
+      configChanged = true;
       checks.push(ok("provider-path", `Stored absolute CLI provider command: ${resolvedCommand}`));
-      return;
+    } else {
+      checks.push(warn("provider-path", `CLI provider command is resolved through PATH: ${command}`, "Use an absolute `--cli-command` for daemon usage, for example `--cli-command \"$(command -v claude)\"`."));
     }
-
-    checks.push(warn("provider-path", `CLI provider command is resolved through PATH: ${command}`, "Use an absolute `--cli-command` for daemon usage, for example `--cli-command \"$(command -v claude)\"`."));
   }
+
+  configChanged = (await checkCliFallback(checks, config, fix)) || configChanged;
+  if (configChanged) {
+    config.updatedAt = new Date().toISOString();
+    await saveConfig(config);
+  }
+}
+
+async function checkCliFallback(checks: IDoctorCheck[], config: INeonConfig, fix: boolean): Promise<boolean> {
+  const fallback = config.provider.fallback;
+  if (fallback !== undefined) {
+    return checkConfiguredCliFallback(checks, config, fallback, fix);
+  }
+
+  if (!isClaudeCliProvider(config)) {
+    return false;
+  }
+
+  if (!fix) {
+    checks.push(warn("provider-fallback", "Codex CLI fallback is not configured for Claude.", "Run `neon doctor --fix` after installing Codex CLI."));
+    return false;
+  }
+
+  const codexCommand = "codex";
+  const resolvedCodex = await resolveExecutable(codexCommand);
+  if (resolvedCodex === undefined) {
+    checks.push(warn("provider-fallback", "Codex CLI fallback is not available.", "Install Codex CLI, then run `neon doctor --fix` again."));
+    return false;
+  }
+
+  config.provider.fallback = {
+    kind: "cli",
+    model: "codex",
+    command: resolvedCodex,
+    args: defaultCliArgsForModel("codex")
+  };
+  checks.push(ok("provider-fallback", `Stored Codex CLI fallback: ${resolvedCodex}`));
+  return true;
+}
+
+async function checkConfiguredCliFallback(checks: IDoctorCheck[], config: INeonConfig, fallback: ICliProviderFallbackConfig, fix: boolean): Promise<boolean> {
+  const resolvedCommand = await resolveExecutable(fallback.command);
+  if (resolvedCommand === undefined) {
+    checks.push(warn("provider-fallback", `CLI fallback command not found or not executable: ${fallback.command}`, "Install the fallback CLI or update provider.fallback.command."));
+    return false;
+  }
+
+  checks.push(ok("provider-fallback", `CLI fallback command is executable: ${resolvedCommand}`));
+  if (isExplicitCommandPath(fallback.command)) {
+    return false;
+  }
+
+  if (!fix) {
+    checks.push(warn("provider-fallback-path", `CLI fallback command is resolved through PATH: ${fallback.command}`, "Run `neon doctor --fix` to store an absolute fallback command for daemon usage."));
+    return false;
+  }
+
+  config.provider.fallback = {
+    ...fallback,
+    command: resolvedCommand
+  };
+  checks.push(ok("provider-fallback-path", `Stored absolute CLI fallback command: ${resolvedCommand}`));
+  return true;
+}
+
+function isClaudeCliProvider(config: INeonConfig): boolean {
+  const model = config.provider.model.toLowerCase();
+  const command = config.provider.command?.toLowerCase() ?? "";
+  return model.includes("claude") || command.includes("claude");
 }
 
 async function checkMemory(checks: IDoctorCheck[], config: INeonConfig, fix: boolean): Promise<void> {

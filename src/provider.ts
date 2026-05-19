@@ -3,7 +3,7 @@ import { appendFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ensureDir, writeJson } from "./fs.js";
 import { requireEnvValue } from "./localEnv.js";
-import type { INeonConfig, ProviderKind } from "./types.js";
+import type { ICliProviderFallbackConfig, INeonConfig, ProviderKind } from "./types.js";
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 800;
 const DEFAULT_CLI_TIMEOUT_MS = 120_000;
@@ -18,6 +18,12 @@ export interface IAgentRunResult {
   durationMs: number;
 }
 
+interface IProviderCallResult {
+  provider: ProviderKind;
+  model: string;
+  output: string;
+}
+
 export async function runAgentPrompt(config: INeonConfig, prompt: string): Promise<IAgentRunResult> {
   const cleanPrompt = prompt.trim();
   if (cleanPrompt.length === 0) {
@@ -25,13 +31,13 @@ export async function runAgentPrompt(config: INeonConfig, prompt: string): Promi
   }
 
   const startedAt = performance.now();
-  const output = await callConfiguredProvider(config, cleanPrompt);
+  const providerResult = await callConfiguredProvider(config, cleanPrompt);
   const result: IAgentRunResult = {
     id: crypto.randomUUID(),
-    provider: config.provider.kind,
-    model: config.provider.model,
+    provider: providerResult.provider,
+    model: providerResult.model,
     prompt: cleanPrompt,
-    output,
+    output: providerResult.output,
     createdAt: new Date().toISOString(),
     durationMs: Math.round(performance.now() - startedAt)
   };
@@ -40,35 +46,81 @@ export async function runAgentPrompt(config: INeonConfig, prompt: string): Promi
   return result;
 }
 
-async function callConfiguredProvider(config: INeonConfig, prompt: string): Promise<string> {
+async function callConfiguredProvider(config: INeonConfig, prompt: string): Promise<IProviderCallResult> {
   switch (config.provider.kind) {
     case "none":
-      return `Provider none received: ${prompt}`;
+      return {
+        provider: "none",
+        model: config.provider.model,
+        output: `Provider none received: ${prompt}`
+      };
     case "openai":
-      return callOpenAi(config, prompt);
+      return {
+        provider: "openai",
+        model: config.provider.model,
+        output: await callOpenAi(config, prompt)
+      };
     case "anthropic":
-      return callAnthropic(config, prompt);
+      return {
+        provider: "anthropic",
+        model: config.provider.model,
+        output: await callAnthropic(config, prompt)
+      };
     case "openrouter":
-      return callOpenRouter(config, prompt);
+      return {
+        provider: "openrouter",
+        model: config.provider.model,
+        output: await callOpenRouter(config, prompt)
+      };
     case "cli":
       return callCli(config, prompt);
   }
 }
 
-async function callCli(config: INeonConfig, prompt: string): Promise<string> {
+async function callCli(config: INeonConfig, prompt: string): Promise<IProviderCallResult> {
   const command = config.provider.command;
   if (command === undefined || command.trim().length === 0) {
     throw new Error("CLI provider command is missing.");
   }
 
   const templateArgs = config.provider.args ?? ["{prompt}"];
+  const timeoutMs = config.provider.timeoutMs ?? DEFAULT_CLI_TIMEOUT_MS;
+  try {
+    return await callCliCommand(command, templateArgs, config.provider.model, prompt, config.workspaceDir, timeoutMs);
+  } catch (error) {
+    const fallback = config.provider.fallback;
+    if (fallback === undefined) {
+      throw error;
+    }
+
+    try {
+      return await callCliFallback(fallback, prompt, config.workspaceDir, timeoutMs);
+    } catch (fallbackError) {
+      throw new Error(`CLI provider failed and fallback failed. Primary: ${formatProviderError(error)} Fallback: ${formatProviderError(fallbackError)}`);
+    }
+  }
+}
+
+async function callCliFallback(fallback: ICliProviderFallbackConfig, prompt: string, cwd: string, primaryTimeoutMs: number): Promise<IProviderCallResult> {
+  return callCliCommand(fallback.command, fallback.args ?? ["{prompt}"], fallback.model, prompt, cwd, fallback.timeoutMs ?? primaryTimeoutMs);
+}
+
+async function callCliCommand(command: string, templateArgs: readonly string[], model: string, prompt: string, cwd: string, timeoutMs: number): Promise<IProviderCallResult> {
   const args = expandCliArgs(templateArgs, prompt);
-  const result = await execCli(command, args, config.workspaceDir, DEFAULT_CLI_TIMEOUT_MS);
+  const result = await execCli(command, args, cwd, timeoutMs);
   if (result.stdout.trim().length > 0) {
-    return result.stdout.trim();
+    return {
+      provider: "cli",
+      model,
+      output: result.stdout.trim()
+    };
   }
   if (result.stderr.trim().length > 0) {
-    return result.stderr.trim();
+    return {
+      provider: "cli",
+      model,
+      output: result.stderr.trim()
+    };
   }
 
   throw new Error("CLI provider returned no output.");
@@ -221,6 +273,10 @@ async function execCli(command: string, args: readonly string[], cwd: string, ti
 function trimCliError(value: string): string {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed.slice(0, 1_000) : "no output";
+}
+
+function formatProviderError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function parseJsonResponse(text: string, url: string): unknown {

@@ -18,9 +18,17 @@ Default config stores an absolute `command` path when the CLI is available durin
   "kind": "cli",
   "model": "claude",
   "command": "/opt/homebrew/bin/claude",
-  "args": ["-p", "{prompt}"]
+  "args": ["-p", "{prompt}"],
+  "fallback": {
+    "kind": "cli",
+    "model": "codex",
+    "command": "/opt/homebrew/bin/codex",
+    "args": ["exec", "{prompt}"]
+  }
 }
 ```
+
+The fallback is optional. If Claude Code times out or exits with an error, the runtime retries the same prompt through the fallback CLI and records the actual model used in the run log.
 
 ## Codex
 
@@ -59,3 +67,5 @@ neon doctor --fix
 ```
 
 That stores the absolute command path for macOS LaunchAgent usage. launchd has a smaller `PATH` than your terminal.
+
+For Claude Code configs, `doctor --fix` also adds a Codex fallback when the `codex` command is executable. Existing custom fallback commands are repaired to absolute paths the same way.

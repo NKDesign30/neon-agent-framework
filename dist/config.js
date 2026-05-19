@@ -43,6 +43,9 @@ export function apiKeyEnvForProvider(provider) {
 export function defaultCliCommandForModel(model) {
     return cliDefaultsForModel(model).command;
 }
+export function defaultCliArgsForModel(model) {
+    return cliDefaultsForModel(model).args;
+}
 export function createConfig(input) {
     const now = new Date().toISOString();
     const stateDir = resolvePath(input.stateDir);
@@ -190,6 +193,19 @@ function isApprovalMode(value) {
 function isStringArray(value) {
     return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
+function isPositiveInteger(value) {
+    return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+function isCliProviderFallbackConfig(value) {
+    if (!isRecord(value)) {
+        return false;
+    }
+    return value.kind === "cli"
+        && isNonEmptyString(value.model)
+        && isNonEmptyString(value.command)
+        && (value.args === undefined || isStringArray(value.args))
+        && (value.timeoutMs === undefined || isPositiveInteger(value.timeoutMs));
+}
 function isProviderConfig(value) {
     if (!isRecord(value)) {
         return false;
@@ -200,10 +216,12 @@ function isProviderConfig(value) {
     if (value.kind === "cli") {
         return isNonEmptyString(value.command)
             && (value.args === undefined || isStringArray(value.args))
+            && (value.timeoutMs === undefined || isPositiveInteger(value.timeoutMs))
+            && (value.fallback === undefined || isCliProviderFallbackConfig(value.fallback))
             && value.apiKeyEnv === undefined;
     }
     const apiKeyOk = value.apiKeyEnv === undefined || isNonEmptyString(value.apiKeyEnv);
-    const cliFieldsAbsent = value.command === undefined && value.args === undefined;
+    const cliFieldsAbsent = value.command === undefined && value.args === undefined && value.timeoutMs === undefined && value.fallback === undefined;
     return apiKeyOk && cliFieldsAbsent;
 }
 function isDiscordConfig(value) {

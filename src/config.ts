@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { ensureDir, readJsonUnknown, resolvePath, writeJson } from "./fs.js";
-import type { ApprovalMode, IApprovalPolicy, IDiscordConfig, INeonConfig, IProviderConfig, ProviderKind } from "./types.js";
+import type { ApprovalMode, ICliProviderFallbackConfig, IApprovalPolicy, IDiscordConfig, INeonConfig, IProviderConfig, ProviderKind } from "./types.js";
 
 const PROVIDERS = new Set<ProviderKind>(["openai", "anthropic", "openrouter", "cli", "none"]);
 const APPROVAL_MODES = new Set<ApprovalMode>(["prompt", "strict"]);
@@ -63,6 +63,10 @@ export function apiKeyEnvForProvider(provider: ProviderKind): string | undefined
 
 export function defaultCliCommandForModel(model: string): string {
   return cliDefaultsForModel(model).command;
+}
+
+export function defaultCliArgsForModel(model: string): string[] {
+  return cliDefaultsForModel(model).args;
 }
 
 export function createConfig(input: ICreateConfigInput): INeonConfig {
@@ -238,6 +242,22 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function isCliProviderFallbackConfig(value: unknown): value is ICliProviderFallbackConfig {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return value.kind === "cli"
+    && isNonEmptyString(value.model)
+    && isNonEmptyString(value.command)
+    && (value.args === undefined || isStringArray(value.args))
+    && (value.timeoutMs === undefined || isPositiveInteger(value.timeoutMs));
+}
+
 function isProviderConfig(value: unknown): value is IProviderConfig {
   if (!isRecord(value)) {
     return false;
@@ -250,11 +270,13 @@ function isProviderConfig(value: unknown): value is IProviderConfig {
   if (value.kind === "cli") {
     return isNonEmptyString(value.command)
       && (value.args === undefined || isStringArray(value.args))
+      && (value.timeoutMs === undefined || isPositiveInteger(value.timeoutMs))
+      && (value.fallback === undefined || isCliProviderFallbackConfig(value.fallback))
       && value.apiKeyEnv === undefined;
   }
 
   const apiKeyOk = value.apiKeyEnv === undefined || isNonEmptyString(value.apiKeyEnv);
-  const cliFieldsAbsent = value.command === undefined && value.args === undefined;
+  const cliFieldsAbsent = value.command === undefined && value.args === undefined && value.timeoutMs === undefined && value.fallback === undefined;
   return apiKeyOk && cliFieldsAbsent;
 }
 

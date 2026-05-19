@@ -2,12 +2,22 @@ export type ProviderKind = "openai" | "anthropic" | "openrouter" | "cli" | "none
 
 export type ApprovalMode = "prompt" | "strict";
 
+export interface ICliProviderFallbackConfig {
+  kind: "cli";
+  model: string;
+  command: string;
+  args?: string[];
+  timeoutMs?: number;
+}
+
 export interface IProviderConfig {
   kind: ProviderKind;
   model: string;
   apiKeyEnv?: string;
   command?: string;
   args?: string[];
+  timeoutMs?: number;
+  fallback?: ICliProviderFallbackConfig;
 }
 
 export interface IDiscordConfig {
