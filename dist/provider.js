@@ -6,13 +6,13 @@ import { ensureDir, writeJson } from "./fs.js";
 import { requireEnvValue } from "./localEnv.js";
 const DEFAULT_MAX_OUTPUT_TOKENS = 800;
 const DEFAULT_CLI_TIMEOUT_MS = 120_000;
-export async function runAgentPrompt(config, prompt) {
+export async function runAgentPrompt(config, prompt, options = {}) {
     const cleanPrompt = prompt.trim();
     if (cleanPrompt.length === 0) {
         throw new Error("Prompt is empty.");
     }
     const startedAt = performance.now();
-    const providerResult = await callConfiguredProvider(config, cleanPrompt);
+    const providerResult = await callConfiguredProvider(config, cleanPrompt, options);
     const result = {
         id: crypto.randomUUID(),
         provider: providerResult.provider,
@@ -25,7 +25,7 @@ export async function runAgentPrompt(config, prompt) {
     await persistAgentRun(config, result);
     return result;
 }
-async function callConfiguredProvider(config, prompt) {
+async function callConfiguredProvider(config, prompt, options) {
     switch (config.provider.kind) {
         case "none":
             return {
@@ -52,18 +52,19 @@ async function callConfiguredProvider(config, prompt) {
                 output: await callOpenRouter(config, prompt)
             };
         case "cli":
-            return callCli(config, prompt);
+            return callCli(config, prompt, options);
     }
 }
-async function callCli(config, prompt) {
+async function callCli(config, prompt, options) {
     const command = config.provider.command;
     if (command === undefined || command.trim().length === 0) {
         throw new Error("CLI provider command is missing.");
     }
     const templateArgs = config.provider.args ?? defaultCliArgsForModel(config.provider.model);
     const timeoutMs = config.provider.timeoutMs ?? DEFAULT_CLI_TIMEOUT_MS;
+    const cwd = options.cwd ?? config.workspaceDir;
     try {
-        return await callCliCommand(command, templateArgs, config.provider.model, prompt, config.workspaceDir, timeoutMs);
+        return await callCliCommand(command, templateArgs, config.provider.model, prompt, cwd, timeoutMs);
     }
     catch (error) {
         const fallback = config.provider.fallback;
@@ -71,7 +72,7 @@ async function callCli(config, prompt) {
             throw error;
         }
         try {
-            return await callCliFallback(fallback, prompt, config.workspaceDir, timeoutMs);
+            return await callCliFallback(fallback, prompt, cwd, timeoutMs);
         }
         catch (fallbackError) {
             throw new Error(`CLI provider failed and fallback failed. Primary: ${formatProviderError(error)} Fallback: ${formatProviderError(fallbackError)}`);

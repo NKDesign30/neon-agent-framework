@@ -100,6 +100,8 @@ neon doctor               # validate local setup
 neon blueprint            # print builder roadmap for the local owner AI
 neon run "prompt"         # run one provider-backed prompt
 neon run --no-progress "prompt" # run without the interactive progress indicator
+neon run --no-project-context "prompt" # avoid workspace cwd scans for local CLI providers
+neon run --no-project-context --context-file AGENTS.md "prompt" # pass one targeted context file
 neon memory init          # create the local SQLite memory database
 neon memory add ...       # add owned context
 neon memory search ...    # search owned context

@@ -5,6 +5,7 @@ const BOOLEAN_FLAGS = new Set([
     "install-daemon",
     "json",
     "no-load",
+    "no-project-context",
     "no-progress",
     "non-interactive",
     "once",
